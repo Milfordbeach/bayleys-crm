@@ -18,7 +18,7 @@ let dailyStats = {
     totalTalkTime: 4140 // seconds
 };
 
-// Sample prospects from Supabase
+// Sample prospects from Supabase (fallback if no upload)
 const supabaseProspects = [
     {
         id: 'SP001',
@@ -28,6 +28,9 @@ const supabaseProspects = [
         property_interest: 'Auckland Central Apartment',
         budget: '$750k - $850k',
         status: 'new',
+        priority_score: 0,
+        nzbn_enriched: false,
+        company: '',
         last_contact: null,
         notes: 'Interested in 2-bedroom apartments, first home buyer'
     },
@@ -39,6 +42,9 @@ const supabaseProspects = [
         property_interest: 'North Shore House',
         budget: '$950k - $1.2M',
         status: 'warm',
+        priority_score: 0,
+        nzbn_enriched: false,
+        company: '',
         last_contact: '2025-06-28',
         notes: 'Pre-approved, looking for family home with good schools'
     },
@@ -50,6 +56,9 @@ const supabaseProspects = [
         property_interest: 'West Auckland Investment',
         budget: '$600k - $800k',
         status: 'hot',
+        priority_score: 0,
+        nzbn_enriched: false,
+        company: '',
         last_contact: '2025-07-01',
         notes: 'Property investor, cash buyer, wants rental yield info'
     },
@@ -61,6 +70,9 @@ const supabaseProspects = [
         property_interest: 'Ponsonby Townhouse',
         budget: '$1.5M+',
         status: 'callback',
+        priority_score: 0,
+        nzbn_enriched: false,
+        company: '',
         last_contact: '2025-06-30',
         notes: 'Upgrading from current home, specific location requirements'
     },
@@ -72,6 +84,9 @@ const supabaseProspects = [
         property_interest: 'Eastern Suburbs Family Home',
         budget: '$1M - $1.3M',
         status: 'interested',
+        priority_score: 0,
+        nzbn_enriched: false,
+        company: '',
         last_contact: '2025-06-25',
         notes: 'Moving from Wellington, needs school zone information'
     }
@@ -86,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function() {
     log('🚀 Bayleys CRM initialized successfully', 'success');
     log('🌐 3CX API connection established', '3cx');
     log('💾 Supabase database connected', 'supabase');
+    log('📊 Upload feature ready - you can now upload enriched calling lists', 'info');
 });
 
 function initializeCRM() {
@@ -98,9 +114,15 @@ function initializeCRM() {
     }, 1500);
 }
 
+// Enhanced prospect loading with upload support
 function loadProspectsFromSupabase() {
     const queue = document.getElementById('prospectQueue');
     queue.innerHTML = '';
+    
+    if (crmState.prospects.length === 0) {
+        queue.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No prospects loaded. Upload a calling list to get started!</div>';
+        return;
+    }
     
     crmState.prospects.forEach((prospect, index) => {
         const item = document.createElement('div');
@@ -112,21 +134,39 @@ function loadProspectsFromSupabase() {
             'warm': 'tag-warm', 
             'new': 'tag-cold',
             'callback': 'tag-callback',
-            'interested': 'tag-warm'
+            'interested': 'tag-warm',
+            'premium': 'tag-hot'
         };
+        
+        // Priority indicator
+        const priorityBadge = prospect.priority_score > 0 ? 
+            `<span class="tag" style="background: #3498db; color: white;">Priority: ${prospect.priority_score}</span>` : '';
+        
+        // NZBN enrichment indicator
+        const nzbnBadge = prospect.nzbn_enriched ? 
+            `<span class="tag" style="background: #27ae60; color: white;">✅ NZBN</span>` : '';
+        
+        // Company info
+        const companyInfo = prospect.company ? 
+            `<div class="prospect-company" style="color: #3498db; font-size: 0.85rem;">🏢 ${prospect.company}</div>` : '';
         
         item.innerHTML = `
             <div class="prospect-name">${prospect.name}</div>
             <div class="prospect-phone">${prospect.phone}</div>
+            ${companyInfo}
             <div class="prospect-property">${prospect.property_interest} • ${prospect.budget}</div>
             <div class="prospect-tags">
-                <span class="tag ${statusColor[prospect.status]}">${prospect.status}</span>
+                ${priorityBadge}
+                ${nzbnBadge}
+                <span class="tag ${statusColor[prospect.status] || 'tag-cold'}">${prospect.status}</span>
                 ${prospect.last_contact ? `<span class="tag" style="background: #e8f5e8; color: #2e7d32;">Last: ${prospect.last_contact}</span>` : ''}
             </div>
         `;
         
         queue.appendChild(item);
     });
+    
+    log(`📋 Displaying ${crmState.prospects.length} prospects (sorted by priority)`, 'info');
 }
 
 function selectProspect(prospect) {
@@ -137,9 +177,149 @@ function selectProspect(prospect) {
     document.getElementById('dialNumber').value = prospect.phone;
     
     log(`👤 Selected: ${prospect.name} (${prospect.phone})`, 'info');
+    if (prospect.priority_score > 0) {
+        log(`🎯 Priority Score: ${prospect.priority_score}`, 'info');
+    }
+    if (prospect.company) {
+        log(`🏢 Company: ${prospect.company}`, 'info');
+    }
     log(`🏠 Interest: ${prospect.property_interest} • Budget: ${prospect.budget}`, 'info');
 }
 
+// FILE UPLOAD FUNCTIONS
+function uploadProspectFile() {
+    const fileInput = document.getElementById('prospectFileUpload');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        updateUploadStatus('Please select a file first', 'error');
+        return;
+    }
+    
+    updateUploadStatus('Reading file...', 'info');
+    log(`📤 Uploading file: ${file.name}`, 'info');
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let data;
+            
+            if (file.name.endsWith('.json')) {
+                data = JSON.parse(e.target.result);
+                log('📄 Parsing JSON file...', 'info');
+            } else if (file.name.endsWith('.csv')) {
+                data = parseCSV(e.target.result);
+                log('📄 Parsing CSV file...', 'info');
+            } else {
+                throw new Error('Unsupported file format. Please use .json or .csv files.');
+            }
+            
+            loadUploadedProspects(data);
+            
+        } catch (error) {
+            updateUploadStatus(`Error reading file: ${error.message}`, 'error');
+            log(`❌ File upload error: ${error.message}`, 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function parseCSV(csvText) {
+    const lines = csvText.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const prospects = [];
+    
+    log(`📊 CSV headers found: ${headers.join(', ')}`, 'info');
+    
+    for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim()) {
+            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+            const prospect = {};
+            
+            headers.forEach((header, index) => {
+                prospect[header] = values[index] || '';
+            });
+            
+            prospects.push(prospect);
+        }
+    }
+    
+    return { prospects: prospects };
+}
+
+function loadUploadedProspects(data) {
+    if (!data.prospects || !Array.isArray(data.prospects)) {
+        updateUploadStatus('Invalid file format. Expected "prospects" array.', 'error');
+        log('❌ Invalid file format - no prospects array found', 'error');
+        return;
+    }
+    
+    // Clear current prospects and load new ones
+    crmState.prospects = data.prospects.map((prospect, index) => ({
+        id: prospect.id || `UP${index + 1}`,
+        name: prospect.name || 'Unknown Name',
+        phone: prospect.phone || '',
+        email: prospect.email || '',
+        property_interest: prospect.property_interest || prospect.interest || '',
+        budget: prospect.budget || '',
+        status: prospect.status || 'new',
+        priority_score: parseFloat(prospect.priority_score) || 0,
+        nzbn_enriched: prospect.nzbn_enriched === 'true' || prospect.nzbn_enriched === true,
+        company: prospect.company || '',
+        last_contact: prospect.last_contact || null,
+        notes: prospect.notes || ''
+    }));
+    
+    // Sort by priority score (highest first)
+    crmState.prospects.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
+    
+    const enrichedCount = crmState.prospects.filter(p => p.nzbn_enriched).length;
+    const avgPriority = crmState.prospects.reduce((sum, p) => sum + (p.priority_score || 0), 0) / crmState.prospects.length;
+    
+    updateUploadStatus(`✅ Successfully loaded ${crmState.prospects.length} prospects`, 'success');
+    log(`📊 Uploaded ${crmState.prospects.length} enriched prospects`, 'success');
+    log(`✅ ${enrichedCount} prospects have NZBN enrichment`, 'success');
+    log(`📈 Average priority score: ${avgPriority.toFixed(2)}`, 'info');
+    
+    // Refresh the display
+    loadProspectsFromSupabase();
+    
+    // Update stats
+    document.getElementById('totalProspects').textContent = crmState.prospects.length.toLocaleString();
+    
+    // Clear file input
+    document.getElementById('prospectFileUpload').value = '';
+}
+
+function clearProspects() {
+    crmState.prospects = [];
+    crmState.selectedProspect = null;
+    document.getElementById('dialNumber').value = '';
+    
+    loadProspectsFromSupabase(); // This will show empty list
+    updateUploadStatus('Prospect list cleared', 'info');
+    log('🗑️ Prospect list cleared', 'info');
+    
+    // Reset stats
+    document.getElementById('totalProspects').textContent = '0';
+}
+
+function updateUploadStatus(message, type) {
+    const statusDiv = document.getElementById('uploadStatus');
+    const colors = {
+        'success': '#27ae60',
+        'error': '#e74c3c',
+        'info': '#3498db',
+        'warning': '#f39c12'
+    };
+    
+    statusDiv.textContent = message;
+    statusDiv.style.color = colors[type] || '#666';
+    statusDiv.style.fontWeight = type === 'error' ? 'bold' : 'normal';
+}
+
+// EXISTING CALL FUNCTIONS
 function makeCall() {
     const phoneNumber = document.getElementById('dialNumber').value;
     
@@ -161,6 +341,16 @@ function makeCall() {
     
     log(`📞 Initiating 3CX call to ${phoneNumber}...`, '3cx');
     log(`🔌 Connecting via Extension 101...`, '3cx');
+    
+    // Log prospect info if available
+    if (crmState.selectedProspect) {
+        if (crmState.selectedProspect.priority_score > 0) {
+            log(`🎯 Calling priority ${crmState.selectedProspect.priority_score} prospect`, 'info');
+        }
+        if (crmState.selectedProspect.nzbn_enriched) {
+            log(`✅ Prospect has NZBN enrichment data`, 'info');
+        }
+    }
     
     // Simulate 3CX API call
     const callData = {
@@ -404,10 +594,16 @@ function saveToSupabase() {
         follow_up_date: document.getElementById('followUpDate').value || null,
         call_duration: crmState.currentCall ? Math.floor((new Date() - crmState.currentCall.startTime) / 1000) : 0,
         agent_id: 'agent_101',
+        priority_score: crmState.selectedProspect?.priority_score || 0,
+        nzbn_enriched: crmState.selectedProspect?.nzbn_enriched || false,
         created_at: new Date().toISOString()
     };
     
     log('💾 Saving call data to Supabase...', 'supabase');
+    
+    if (callData.priority_score > 0) {
+        log(`🎯 Saving priority ${callData.priority_score} prospect result`, 'info');
+    }
     
     // Simulate Supabase insert
     setTimeout(() => {
@@ -462,7 +658,8 @@ function loadMoreProspects() {
     // Simulate loading more data
     setTimeout(() => {
         log('✅ Additional prospects loaded', 'success');
-        document.getElementById('totalProspects').textContent = '526,897';
+        const currentCount = parseInt(document.getElementById('totalProspects').textContent.replace(/,/g, ''));
+        document.getElementById('totalProspects').textContent = (currentCount + 50).toLocaleString();
     }, 1500);
 }
 
@@ -524,7 +721,8 @@ function syncProspects() {
     
     setTimeout(() => {
         log('✅ Prospect sync completed', 'success');
-        document.getElementById('totalProspects').textContent = (parseInt(document.getElementById('totalProspects').textContent.replace(/,/g, '')) + 23).toLocaleString();
+        const currentCount = parseInt(document.getElementById('totalProspects').textContent.replace(/,/g, ''));
+        document.getElementById('totalProspects').textContent = (currentCount + 23).toLocaleString();
     }, 2000);
 }
 
@@ -592,6 +790,10 @@ function testCallFlow() {
     if (crmState.prospects.length > 0) {
         selectProspect(crmState.prospects[0]);
         log(`👤 Auto-selected: ${crmState.prospects[0].name}`, 'info');
+        
+        if (crmState.prospects[0].priority_score > 0) {
+            log(`🎯 Testing with priority ${crmState.prospects[0].priority_score} prospect`, 'info');
+        }
     }
     
     // Start test call
@@ -610,8 +812,9 @@ document.addEventListener('keydown', function(e) {
             case 'h': e.preventDefault(); holdCall(); break;
             case 'm': e.preventDefault(); toggleMute(); break;
             case 't': e.preventDefault(); testCallFlow(); break;
+            case 'u': e.preventDefault(); document.getElementById('prospectFileUpload').click(); break;
         }
     }
 });
 
-log('⌨️ Shortcuts: Ctrl+1 (Call), Ctrl+2 (End), Ctrl+H (Hold), Ctrl+M (Mute), Ctrl+T (Test)', 'info');
+log('⌨️ Shortcuts: Ctrl+1 (Call), Ctrl+2 (End), Ctrl+H (Hold), Ctrl+M (Mute), Ctrl+T (Test), Ctrl+U (Upload)', 'info');
