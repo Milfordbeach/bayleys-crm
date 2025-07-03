@@ -61,6 +61,17 @@
                 <h3>👥 Prospect Queue</h3>
                 
                 <input type="text" class="search-box" id="prospectSearch" placeholder="🔍 Search prospects..." onkeyup="filterProspects()">
+
+                <!-- Add this RIGHT AFTER the search box in the Prospect Queue section -->
+        <div class="upload-section" style="margin-bottom: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 1px solid #2ecc71;">
+    <h4 style="margin: 0 0 10px 0; color: #27ae60;">📊 Upload Enriched Calling List</h4>
+    <input type="file" id="prospectFileUpload" accept=".csv,.json" style="margin-bottom: 10px;">
+    <div style="display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="uploadProspectFile()">📤 Upload & Load Prospects</button>
+        <button class="btn btn-secondary" onclick="clearProspects()">🗑️ Clear Current List</button>
+    </div>
+    <div id="uploadStatus" style="margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
+    </div>
                 
                 <div class="prospect-queue" id="prospectQueue">
                     <!-- Prospects will be loaded here -->
