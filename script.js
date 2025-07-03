@@ -1,359 +1,401 @@
-// Global variables
-let supabaseClient = null;
-let isConnected = false;
-
-// Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Bayleys CRM Application Loaded');
-    // Small delay to ensure all elements are ready
-    setTimeout(() => {
-        loadSavedConfig();
-    }, 100);
-});
-
-// Fallback initialization if DOMContentLoaded already fired
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('Bayleys CRM Application Loaded');
-        setTimeout(() => {
-            loadSavedConfig();
-        }, 100);
-    });
-} else {
-    // DOM is already ready
-    console.log('Bayleys CRM Application Loaded');
-    setTimeout(() => {
-        loadSavedConfig();
-    }, 100);
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-// Load saved configuration from localStorage
-function loadSavedConfig() {
-    try {
-        // Your Supabase credentials
-        const defaultUrl = 'https://nbxzyouzfqajamxxpeqp.supabase.co';
-        const defaultKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ieHp5b3V6ZnFhamFteHhwZXFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE0Mjg5MjEsImV4cCI6MjA2NzAwNDkyMX0.XEh9BG4k_8uc-ktVKaoZoJ32NRc4cvCzSMZMO4FKVmE';
-        
-        const savedUrl = localStorage.getItem('supabaseUrl') || defaultUrl;
-        const savedKey = localStorage.getItem('supabaseKey') || defaultKey;
-        
-        // Check if elements exist before setting values
-        const urlElement = document.getElementById('supabaseUrl');
-        const keyElement = document.getElementById('supabaseKey');
-        
-        if (urlElement && keyElement) {
-            urlElement.value = savedUrl;
-            keyElement.value = savedKey;
-            
-            // Auto-configure API with your credentials
-            configureAPI();
-        } else {
-            console.error('Could not find API configuration elements');
-            // Retry after a short delay
-            setTimeout(loadSavedConfig, 500);
-        }
-    } catch (error) {
-        console.error('Error in loadSavedConfig:', error);
-    }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
 }
 
-// Configure Supabase API connection
-async function configureAPI() {
-    const url = document.getElementById('supabaseUrl').value.trim();
-    const key = document.getElementById('supabaseKey').value.trim();
-    const statusDiv = document.getElementById('connectionStatus');
-
-    if (!url || !key) {
-        showAlert('Please enter both Supabase URL and API key', 'error', statusDiv);
-        return;
-    }
-
-    try {
-        // Save configuration
-        localStorage.setItem('supabaseUrl', url);
-        localStorage.setItem('supabaseKey', key);
-
-        // Initialize Supabase client
-        // You can add the Supabase SDK and initialize it here:
-        // supabaseClient = supabase.createClient(url, key);
-        
-        // For now, we'll simulate the connection
-        showAlert('API configuration saved successfully!', 'success', statusDiv);
-        isConnected = true;
-        
-        // Load initial data
-        await loadClients();
-        updateStats();
-        loadRecentActivity();
-        
-    } catch (error) {
-        console.error('API Configuration Error:', error);
-        showAlert('Failed to configure API: ' + error.message, 'error', statusDiv);
-    }
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
 }
 
-// Add new client
-async function addClient() {
-    if (!isConnected) {
-        alert('Please configure your API connection first');
-        return;
-    }
-
-    const name = document.getElementById('clientName').value.trim();
-    const email = document.getElementById('clientEmail').value.trim();
-    const phone = document.getElementById('clientPhone').value.trim();
-
-    if (!name || !email) {
-        alert('Please enter at least name and email');
-        return;
-    }
-
-    try {
-        // Create new client object
-        const newClient = {
-            id: Date.now(),
-            name: name,
-            email: email,
-            phone: phone,
-            created_at: new Date().toISOString()
-        };
-
-        // TODO: Replace with actual Supabase insert
-        // const { data, error } = await supabaseClient
-        //     .from('clients')
-        //     .insert([newClient]);
-
-        // For demo purposes, save to localStorage
-        let clients = JSON.parse(localStorage.getItem('clients') || '[]');
-        clients.push(newClient);
-        localStorage.setItem('clients', JSON.stringify(clients));
-
-        // Clear form
-        document.getElementById('clientName').value = '';
-        document.getElementById('clientEmail').value = '';
-        document.getElementById('clientPhone').value = '';
-
-        // Reload clients table and update stats
-        await loadClients();
-        updateStats();
-        loadRecentActivity();
-        
-        showAlert('Client added successfully!', 'success');
-    } catch (error) {
-        console.error('Add Client Error:', error);
-        showAlert('Failed to add client: ' + error.message, 'error');
-    }
+.header {
+    background: linear-gradient(45deg, #2c3e50, #3498db);
+    color: white;
+    padding: 20px;
+    text-align: center;
 }
 
-// Load clients from database
-async function loadClients() {
-    const tableBody = document.getElementById('clientTableBody');
-    const loadingIndicator = document.getElementById('loadingIndicator');
-
-    loadingIndicator.style.display = 'block';
-
-    try {
-        // TODO: Replace with actual Supabase query
-        // const { data: clients, error } = await supabaseClient
-        //     .from('clients')
-        //     .select('*')
-        //     .order('created_at', { ascending: false });
-
-        // For demo purposes, load from localStorage
-        const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-        
-        tableBody.innerHTML = '';
-        
-        if (clients.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align: center; padding: 40px;">
-                        No clients found. Add your first client above.
-                    </td>
-                </tr>
-            `;
-        } else {
-            clients.forEach(client => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${escapeHtml(client.name)}</td>
-                    <td>${escapeHtml(client.email)}</td>
-                    <td>${escapeHtml(client.phone || 'N/A')}</td>
-                    <td>${new Date(client.created_at).toLocaleDateString()}</td>
-                    <td>
-                        <button class="btn" onclick="editClient(${client.id})" style="font-size: 12px; padding: 6px 12px; margin-right: 5px;">Edit</button>
-                        <button class="btn" onclick="deleteClient(${client.id})" style="font-size: 12px; padding: 6px 12px; background: #e53e3e;">Delete</button>
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            });
-        }
-    } catch (error) {
-        console.error('Load Clients Error:', error);
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="5" style="text-align: center; padding: 40px; color: #c53030;">
-                    Error loading clients: ${error.message}
-                </td>
-            </tr>
-        `;
-    } finally {
-        loadingIndicator.style.display = 'none';
-    }
+.header h1 {
+    font-size: 2rem;
+    margin-bottom: 10px;
 }
 
-// Update statistics
-function updateStats() {
-    const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-    document.getElementById('totalClients').textContent = clients.length;
-    document.getElementById('activeDeals').textContent = Math.floor(clients.length * 0.3);
+.integration-badges {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
 }
 
-// Load recent activity
-function loadRecentActivity() {
-    const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-    const activityDiv = document.getElementById('recentActivity');
-    
-    if (clients.length === 0) {
-        activityDiv.innerHTML = '<p>No recent activity</p>';
-        return;
-    }
-
-    const recentClients = clients
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 3);
-
-    activityDiv.innerHTML = recentClients
-        .map(client => `<p>📝 Added client: ${escapeHtml(client.name)}</p>`)
-        .join('');
+.badge {
+    padding: 5px 15px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 20px;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-// Edit client function
-function editClient(clientId) {
-    const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-    const client = clients.find(c => c.id === clientId);
-    
-    if (!client) {
-        alert('Client not found');
-        return;
-    }
-
-    const newName = prompt('Edit client name:', client.name);
-    const newEmail = prompt('Edit client email:', client.email);
-    const newPhone = prompt('Edit client phone:', client.phone || '');
-
-    if (newName && newEmail) {
-        client.name = newName;
-        client.email = newEmail;
-        client.phone = newPhone;
-        
-        localStorage.setItem('clients', JSON.stringify(clients));
-        loadClients();
-        showAlert('Client updated successfully!', 'success');
-    }
+.status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2ecc71;
+    animation: pulse 2s infinite;
 }
 
-// Delete client function
-function deleteClient(clientId) {
-    if (!confirm('Are you sure you want to delete this client?')) {
-        return;
-    }
-
-    try {
-        let clients = JSON.parse(localStorage.getItem('clients') || '[]');
-        clients = clients.filter(c => c.id !== clientId);
-        localStorage.setItem('clients', JSON.stringify(clients));
-        
-        loadClients();
-        updateStats();
-        loadRecentActivity();
-        showAlert('Client deleted successfully!', 'success');
-    } catch (error) {
-        console.error('Delete Client Error:', error);
-        showAlert('Failed to delete client: ' + error.message, 'error');
-    }
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
 }
 
-// Test connection function
-async function testConnection() {
-    if (!isConnected) {
-        alert('Please configure your API connection first');
-        return;
-    }
-    
-    try {
-        // TODO: Add actual Supabase connection test
-        // const { data, error } = await supabaseClient.from('clients').select('count');
-        
-        showAlert('Connection test successful!', 'success');
-    } catch (error) {
-        showAlert('Connection test failed: ' + error.message, 'error');
-    }
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    padding: 20px;
 }
 
-// Utility function to show alerts
-function showAlert(message, type, container = null) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
-    
-    if (container) {
-        container.innerHTML = '';
-        container.appendChild(alertDiv);
-    } else {
-        // Show at the top of the page
-        const header = document.querySelector('.header');
-        header.parentNode.insertBefore(alertDiv, header.nextSibling);
-    }
-    
-    setTimeout(() => {
-        alertDiv.remove();
-    }, 5000);
+.section {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    border-left: 4px solid #3498db;
 }
 
-// Utility function to escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+.section h3 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-// Export/Import functionality
-function exportData() {
-    const clients = JSON.parse(localStorage.getItem('clients') || '[]');
-    const dataStr = JSON.stringify(clients, null, 2);
-    const dataBlob = new Blob([dataStr], {type: 'application/json'});
-    
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(dataBlob);
-    link.download = 'bayleys-clients-export.json';
-    link.click();
+.call-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    margin-bottom: 20px;
 }
 
-function importData() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = function(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const clients = JSON.parse(e.target.result);
-                    localStorage.setItem('clients', JSON.stringify(clients));
-                    loadClients();
-                    updateStats();
-                    loadRecentActivity();
-                    showAlert('Data imported successfully!', 'success');
-                } catch (error) {
-                    showAlert('Failed to import data: Invalid file format', 'error');
-                }
-            };
-            reader.readAsText(file);
-        }
-    };
-    
-    input.click();
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.btn-primary { background: #27ae60; color: white; }
+.btn-danger { background: #e74c3c; color: white; }
+.btn-warning { background: #f39c12; color: white; }
+.btn-info { background: #3498db; color: white; }
+.btn-secondary { background: #95a5a6; color: white; }
+
+.btn:disabled {
+    opacity: 0.6;
+    transform: none;
+    cursor: not-allowed;
+}
+
+.call-status {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.status-idle { background: #ecf0f1; color: #7f8c8d; }
+.status-calling { background: #fff3cd; color: #856404; }
+.status-connected { background: #d4edda; color: #155724; }
+
+.extension-status {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.extension-card {
+    padding: 12px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.extension-number {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.extension-label {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+}
+
+.prospect-queue {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    background: white;
+}
+
+.prospect-item {
+    padding: 12px;
+    border-bottom: 1px solid #f1f1f1;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.prospect-item:hover {
+    background: #f8f9fa;
+}
+
+.prospect-item.current {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+}
+
+.prospect-name {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.prospect-phone {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+.prospect-property {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
+.prospect-tags {
+    display: flex;
+    gap: 5px;
+    margin-top: 5px;
+}
+
+.tag {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.tag-hot { background: #ffebee; color: #c62828; }
+.tag-warm { background: #fff3e0; color: #ef6c00; }
+.tag-cold { background: #e8f5e8; color: #2e7d32; }
+.tag-callback { background: #f3e5f5; color: #7b1fa2; }
+
+.three-cx-section {
+    background: linear-gradient(45deg, #34495e, #2c3e50);
+    color: white;
+    border-left-color: #e74c3c;
+}
+
+.connection-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.connection-item {
+    padding: 12px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.connection-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #3498db;
+}
+
+.connection-label {
+    font-size: 0.8rem;
+    color: #bdc3c7;
+    margin-top: 2px;
+}
+
+.timer {
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    color: #2c3e50;
+    margin: 10px 0;
+}
+
+.supabase-section {
+    background: linear-gradient(45deg, #16a085, #27ae60);
+    color: white;
+    border-left-color: #16a085;
+}
+
+.db-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.db-stat {
+    padding: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 6px;
+    text-align: center;
+}
+
+.db-number {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+
+.db-label {
+    font-size: 0.8rem;
+    opacity: 0.9;
+}
+
+.log-area {
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 15px;
+    border-radius: 8px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding: 2px 0;
+}
+
+.log-timestamp { color: #95a5a6; }
+.log-success { color: #2ecc71; }
+.log-error { color: #e74c3c; }
+.log-warning { color: #f39c12; }
+.log-3cx { color: #e67e22; }
+.log-supabase { color: #16a085; }
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.input-group input, .input-group select, .input-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.disposition-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.disposition-btn {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.disposition-btn:hover {
+    background: #f8f9fa;
+    border-color: #3498db;
+}
+
+.disposition-btn.selected {
+    background: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.stats-dashboard {
+    grid-column: 1 / -1;
+    background: #2c3e50;
+    color: white;
+    border-left-color: #3498db;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #3498db;
+}
+
+.stat-label {
+    color: #bdc3c7;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.search-box {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    font-size: 1rem;
 }
