@@ -3,109 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bayleys CRM Dashboard</title>
-    <!-- Replace with your actual Supabase project URL -->
-    <link rel="stylesheet" href="https://nbxzyouzfqajamxxpeqp.supabase.co/storage/v1/object/public/bayleys-crm/styles.css">
+    <title>Bayleys CRM - 3CX Integration</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">
-                <div class="logo-icon">B</div>
-                <div>
-                    <h1>Bayleys CRM</h1>
-                    <div class="status">
-                        <div class="status-indicator"></div>
-                        <span>System Online</span>
-                    </div>
+            <h1>🏠 Bayleys CRM - 3CX Integration</h1>
+            <div class="integration-badges">
+                <div class="badge">
+                    <div class="status-indicator"></div>
+                    3CX Connected (nbxzyouzfqajamxxpeqp)
+                </div>
+                <div class="badge">
+                    <div class="status-indicator"></div>
+                    Supabase Live
+                </div>
+                <div class="badge">
+                    <div class="status-indicator"></div>
+                    526K Prospects Loaded
                 </div>
             </div>
         </div>
-
-        <div class="api-config">
-            <h3>API Configuration</h3>
-            <div class="form-group">
-                <label for="supabaseUrl">Supabase URL</label>
-                <input type="url" id="supabaseUrl" placeholder="https://your-project.supabase.co">
-            </div>
-            <div class="form-group">
-                <label for="supabaseKey">Supabase Anon Key</label>
-                <input type="password" id="supabaseKey" placeholder="Your Supabase anonymous key">
-            </div>
-            <button class="btn" onclick="configureAPI()">Connect to Database</button>
-            <div id="connectionStatus"></div>
-        </div>
-
-        <div class="dashboard">
-            <div class="card">
-                <h3>Quick Stats</h3>
-                <div class="stats">
-                    <div class="stat-item">
-                        <span class="stat-number" id="totalClients">--</span>
-                        <div class="stat-label">Total Clients</div>
+        <div class="main-content">
+            <div class="section">
+                <h3>📞 Call Controls</h3>
+                
+                <div class="extension-status">
+                    <div class="extension-card">
+                        <div class="extension-number">101</div>
+                        <div class="extension-label">Your Extension</div>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="activeDeals">--</span>
-                        <div class="stat-label">Active Deals</div>
+                    <div class="extension-card">
+                        <div class="extension-number" id="activeLines">0/4</div>
+                        <div class="extension-label">Active Lines</div>
                     </div>
                 </div>
-            </div>
-
-            <div class="card">
-                <h3>Recent Activity</h3>
-                <div id="recentActivity">
-                    <p>Connect to database to view recent activity</p>
+                <div class="call-status status-idle" id="callStatus">READY - Select prospect to dial</div>
+                <div class="timer" id="callTimer">00:00:00</div>
+                
+                <div class="call-controls">
+                    <button class="btn btn-primary" id="makeCallBtn" onclick="makeCall()">📞 Make Call</button>
+                    <button class="btn btn-danger" id="endCallBtn" onclick="endCall()" disabled>End Call</button>
+                    <button class="btn btn-warning" id="holdCallBtn" onclick="holdCall()" disabled>Hold</button>
+                    <button class="btn btn-info" id="transferCallBtn" onclick="showTransfer()" disabled>Transfer</button>
+                    <button class="btn btn-secondary" id="muteCallBtn" onclick="toggleMute()" disabled>Mute</button>
+                </div>
+                <div class="call-controls">
+                    <button class="btn btn-info" onclick="testCallFlow()" style="grid-column: 1 / -1;">🧪 Test Call Flow</button>
+                </div>
+                <div class="input-group">
+                    <label for="dialNumber">Direct Dial:</label>
+                    <input type="tel" id="dialNumber" placeholder="+64 9 123 4567" onkeypress="handleDialKeypress(event)">
                 </div>
             </div>
-
-            <div class="card">
-                <h3>Add New Client</h3>
-                <div class="form-group">
-                    <label for="clientName">Client Name</label>
-                    <input type="text" id="clientName" placeholder="Enter client name">
+            <div class="section">
+                <h3>👥 Prospect Queue</h3>
+                
+                <input type="text" class="search-box" id="prospectSearch" placeholder="🔍 Search prospects..." onkeyup="filterProspects()">
+                
+                <div class="prospect-queue" id="prospectQueue">
+                    <!-- Prospects will be loaded here -->
                 </div>
-                <div class="form-group">
-                    <label for="clientEmail">Email</label>
-                    <input type="email" id="clientEmail" placeholder="Enter email address">
+                
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-info" onclick="loadMoreProspects()">Load More (50)</button>
+                    <button class="btn btn-warning" onclick="refreshProspects()">🔄 Refresh</button>
                 </div>
-                <div class="form-group">
-                    <label for="clientPhone">Phone</label>
-                    <input type="tel" id="clientPhone" placeholder="Enter phone number">
-                </div>
-                <button class="btn" onclick="addClient()">Add Client</button>
             </div>
-        </div>
-
-        <div class="card">
-            <h3>Client Database</h3>
-            <div class="loading" id="loadingIndicator">
-                <div class="spinner"></div>
-                <p>Loading data...</p>
+            <div class="section three-cx-section">
+                <h3 style="color: white;">🌐 3CX Status</h3>
+                
+                <div class="connection-grid">
+                    <div class="connection-item">
+                        <div class="connection-value" id="serverStatus">Online</div>
+                        <div class="connection-label">Server Status</div>
+                    </div>
+                    <div class="connection-item">
+                        <div class="connection-value" id="sipStatus">Registered</div>
+                        <div class="connection-label">SIP Status</div>
+                    </div>
+                    <div class="connection-item">
+                        <div class="connection-value" id="callQuality">Excellent</div>
+                        <div class="connection-label">Call Quality</div>
+                    </div>
+                    <div class="connection-item">
+                        <div class="connection-value" id="apiCalls">127</div>
+                        <div class="connection-label">API Calls Today</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="test3CXConnection()">🔧 Test 3CX API</button>
+                <button class="btn btn-warning" onclick="restart3CXConnection()">🔄 Restart SIP</button>
             </div>
-            <div id="clientTable">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Date Added</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="clientTableBody">
-                        <tr>
-                            <td colspan="5" style="text-align: center; padding: 40px;">
-                                Connect to database to view clients
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <div class="section supabase-section">
+                <h3 style="color: white;">💾 Supabase Database</h3>
+                
+                <div class="db-stats">
+                    <div class="db-stat">
+                        <div class="db-number" id="totalProspects">526,847</div>
+                        <div class="db-label">Total Prospects</div>
+                    </div>
+                    <div class="db-stat">
+                        <div class="db-number" id="callsToday">23</div>
+                        <div class="db-label">Calls Today</div>
+                    </div>
+                    <div class="db-stat">
+                        <div class="db-number" id="leadsThisWeek">7</div>
+                        <div class="db-label">Leads This Week</div>
+                    </div>
+                    <div class="db-stat">
+                        <div class="db-number" id="dbLatency">45ms</div>
+                        <div class="db-label">DB Latency</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="testSupabaseConnection()">🔧 Test Database</button>
+                <button class="btn btn-info" onclick="syncProspects()">🔄 Sync Prospects</button>
+            </div>
+            <div class="section">
+                <h3>📋 Call Disposition</h3>
+                
+                <div class="disposition-grid">
+                    <div class="disposition-btn" onclick="setDisposition('contacted')">✅ Contacted</div>
+                    <div class="disposition-btn" onclick="setDisposition('appointment')">📅 Appointment</div>
+                    <div class="disposition-btn" onclick="setDisposition('interested')">👍 Interested</div>
+                    <div class="disposition-btn" onclick="setDisposition('callback')">📞 Callback</div>
+                    <div class="disposition-btn" onclick="setDisposition('voicemail')">📧 Voicemail</div>
+                    <div class="disposition-btn" onclick="setDisposition('no-answer')">❌ No Answer</div>
+                    <div class="disposition-btn" onclick="setDisposition('not-interested')">👎 Not Interested</div>
+                    <div class="disposition-btn" onclick="setDisposition('wrong-number')">🚫 Wrong Number</div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="callNotes">Call Notes:</label>
+                    <textarea id="callNotes" rows="3" placeholder="Property interest, budget, timeline, objections..."></textarea>
+                </div>
+                
+                <div class="input-group">
+                    <label for="followUpDate">Follow-up Date:</label>
+                    <input type="datetime-local" id="followUpDate">
+                </div>
+                
+                <button class="btn btn-primary" onclick="saveToSupabase()">💾 Save to Supabase</button>
+            </div>
+            <div class="section">
+                <h3>📊 Activity Log</h3>
+                <div class="log-area" id="activityLog">
+                    <div class="log-entry">
+                        <span class="log-timestamp">[14:30:00]</span>
+                        <span class="log-3cx">3CX SIP registration successful</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-timestamp">[14:30:01]</span>
+                        <span class="log-supabase">Supabase connection established</span>
+                    </div>
+                    <div class="log-entry">
+                        <span class="log-timestamp">[14:30:02]</span>
+                        <span class="log-success">CRM ready - 526,847 prospects loaded</span>
+                    </div>
+                </div>
+            </div>
+            <div class="section stats-dashboard">
+                <h3 style="color: white;">📈 Daily Performance</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalCalls">23</div>
+                        <div class="stat-label">Total Calls</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="connectRate">67%</div>
+                        <div class="stat-label">Connect Rate</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avgTalkTime">4m 32s</div>
+                        <div class="stat-label">Avg Talk Time</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="appointmentsSet">3</div>
+                        <div class="stat-label">Appointments</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="qualifiedLeads">7</div>
+                        <div class="stat-label">Qualified Leads</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="callbacksScheduled">5</div>
+                        <div class="stat-label">Callbacks</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-
-    <!-- Replace with your actual Supabase project URL -->
-    <script src="https://nbxzyouzfqajamxxpeqp.supabase.co/storage/v1/object/public/bayleys-crm/script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
