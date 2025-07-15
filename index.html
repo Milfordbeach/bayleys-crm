@@ -3,133 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bayleys CRM - 3CX Integration</title>
+    <title>Bayleys CRM - 3CX Click-to-Call</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏠 Bayleys CRM - 3CX Integration</h1>
+            <h1>🏠 Bayleys CRM - 3CX Click-to-Call Integration</h1>
             <div class="integration-badges">
                 <div class="badge">
                     <div class="status-indicator"></div>
-                    3CX Connected (nbxzyouzfqajamxxpeqp)
+                    3CX Click-to-Call Ready
                 </div>
                 <div class="badge">
                     <div class="status-indicator"></div>
-                    Supabase Live
+                    Supabase Database Live
                 </div>
                 <div class="badge">
                     <div class="status-indicator"></div>
-                    526K Prospects Loaded
+                    <span id="prospectCount">0</span> Prospects Loaded
                 </div>
             </div>
         </div>
         <div class="main-content">
             <div class="section">
-                <h3>📞 Call Controls</h3>
+                <h3>📞 3CX Click-to-Call</h3>
+                
+                <div class="three-cx-integration-notice">
+                    <h4>🎯 Real 3CX Integration Active</h4>
+                    <p>Your CRM now opens 3CX Web Client with pre-filled numbers. Click "Call" in your CRM, then click "Call" in 3CX to connect!</p>
+                </div>
                 
                 <div class="extension-status">
                     <div class="extension-card">
-                        <div class="extension-number">101</div>
+                        <div class="extension-number">200</div>
                         <div class="extension-label">Your Extension</div>
                     </div>
                     <div class="extension-card">
-                        <div class="extension-number" id="activeLines">0/4</div>
-                        <div class="extension-label">Active Lines</div>
+                        <div class="extension-number" id="clickToCallCount">0</div>
+                        <div class="extension-label">Calls Initiated</div>
                     </div>
                 </div>
-                <div class="call-status status-idle" id="callStatus">READY - Select prospect to dial</div>
-                <div class="timer" id="callTimer">00:00:00</div>
+                
+                <div class="call-status status-idle" id="callStatus">READY - Select prospect to call</div>
                 
                 <div class="call-controls">
-                    <button class="btn btn-primary" id="makeCallBtn" onclick="makeCall()">📞 Make Call</button>
-                    <button class="btn btn-danger" id="endCallBtn" onclick="endCall()" disabled>End Call</button>
-                    <button class="btn btn-warning" id="holdCallBtn" onclick="holdCall()" disabled>Hold</button>
-                    <button class="btn btn-info" id="transferCallBtn" onclick="showTransfer()" disabled>Transfer</button>
-                    <button class="btn btn-secondary" id="muteCallBtn" onclick="toggleMute()" disabled>Mute</button>
+                    <button class="btn click-to-call-btn" id="makeCallBtn" onclick="makeClickToCall()">📞 3CX Click-to-Call</button>
                 </div>
-                <div class="call-controls">
-                    <button class="btn btn-info" onclick="testCallFlow()" style="grid-column: 1 / -1;">🧪 Test Call Flow</button>
-                </div>
+                
                 <div class="input-group">
                     <label for="dialNumber">Direct Dial:</label>
                     <input type="tel" id="dialNumber" placeholder="+64 9 123 4567" onkeypress="handleDialKeypress(event)">
                 </div>
+                
+                <div style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 5px; font-size: 0.9rem;">
+                    <strong>🔧 3CX Configuration:</strong><br>
+                    Instance: <code id="threeCXInstance">jamestaylor.3cx.co.nz</code><br>
+                    Extension: <code>200</code><br>
+                    Status: <span style="color: #27ae60;">✅ Ready</span>
+                </div>
             </div>
+            
             <div class="section">
                 <h3>👥 Prospect Queue</h3>
                 
                 <input type="text" class="search-box" id="prospectSearch" placeholder="🔍 Search prospects..." onkeyup="filterProspects()">
 
-                <!-- Add this RIGHT AFTER the search box in the Prospect Queue section -->
-        <div class="upload-section" style="margin-bottom: 15px; padding: 15px; background: #e8f5e8; border-radius: 8px; border: 1px solid #2ecc71;">
-    <h4 style="margin: 0 0 10px 0; color: #27ae60;">📊 Upload Enriched Calling List</h4>
-    <input type="file" id="prospectFileUpload" accept=".csv,.json" style="margin-bottom: 10px;">
-    <div style="display: flex; gap: 10px;">
-        <button class="btn btn-primary" onclick="uploadProspectFile()">📤 Upload & Load Prospects</button>
-        <button class="btn btn-secondary" onclick="clearProspects()">🗑️ Clear Current List</button>
-    </div>
-    <div id="uploadStatus" style="margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
-    </div>
+                <div class="upload-section">
+                    <h4>📊 Upload Enriched Calling List</h4>
+                    <input type="file" id="prospectFileUpload" accept=".csv,.json" style="margin-bottom: 10px;">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" onclick="uploadProspectFile()">📤 Upload & Load Prospects</button>
+                        <button class="btn btn-secondary" onclick="clearProspects()">🗑️ Clear Current List</button>
+                    </div>
+                    <div id="uploadStatus" class="upload-status"></div>
+                </div>
                 
                 <div class="prospect-queue" id="prospectQueue">
                     <!-- Prospects will be loaded here -->
                 </div>
                 
                 <div style="margin-top: 15px;">
-                    <button class="btn btn-info" onclick="loadMoreProspects()">Load More (50)</button>
+                    <button class="btn btn-info" onclick="loadSampleProspects()">📋 Load Sample Data</button>
                     <button class="btn btn-warning" onclick="refreshProspects()">🔄 Refresh</button>
                 </div>
             </div>
+            
             <div class="section three-cx-section">
                 <h3 style="color: white;">🌐 3CX Status</h3>
                 
                 <div class="connection-grid">
                     <div class="connection-item">
-                        <div class="connection-value" id="serverStatus">Online</div>
-                        <div class="connection-label">Server Status</div>
+                        <div class="connection-value" id="serverStatus">Connected</div>
+                        <div class="connection-label">3CX Server</div>
                     </div>
                     <div class="connection-item">
-                        <div class="connection-value" id="sipStatus">Registered</div>
-                        <div class="connection-label">SIP Status</div>
+                        <div class="connection-value" id="extensionStatus">Active</div>
+                        <div class="connection-label">Extension 200</div>
                     </div>
                     <div class="connection-item">
-                        <div class="connection-value" id="callQuality">Excellent</div>
-                        <div class="connection-label">Call Quality</div>
+                        <div class="connection-value" id="integrationMode">Click-to-Call</div>
+                        <div class="connection-label">Integration Mode</div>
                     </div>
                     <div class="connection-item">
-                        <div class="connection-value" id="apiCalls">127</div>
-                        <div class="connection-label">API Calls Today</div>
+                        <div class="connection-value" id="dailyClickToCalls">0</div>
+                        <div class="connection-label">Today's Calls</div>
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="test3CXConnection()">🔧 Test 3CX API</button>
-                <button class="btn btn-warning" onclick="restart3CXConnection()">🔄 Restart SIP</button>
+                
+                <button class="btn btn-primary" onclick="test3CXIntegration()">🔧 Test 3CX Integration</button>
+                <button class="btn btn-info" onclick="open3CXWebClient()">🌐 Open 3CX Web Client</button>
             </div>
+            
             <div class="section supabase-section">
-                <h3 style="color: white;">💾 Supabase Database</h3>
+                <h3 style="color: white;">💾 Call Logging Database</h3>
                 
                 <div class="db-stats">
                     <div class="db-stat">
-                        <div class="db-number" id="totalProspects">526,847</div>
+                        <div class="db-number" id="totalProspects">0</div>
                         <div class="db-label">Total Prospects</div>
                     </div>
                     <div class="db-stat">
-                        <div class="db-number" id="callsToday">23</div>
+                        <div class="db-number" id="callsToday">0</div>
                         <div class="db-label">Calls Today</div>
                     </div>
                     <div class="db-stat">
-                        <div class="db-number" id="leadsThisWeek">7</div>
+                        <div class="db-number" id="leadsThisWeek">0</div>
                         <div class="db-label">Leads This Week</div>
                     </div>
                     <div class="db-stat">
-                        <div class="db-number" id="dbLatency">45ms</div>
-                        <div class="db-label">DB Latency</div>
+                        <div class="db-number" id="avgPriorityScore">0.0</div>
+                        <div class="db-label">Avg Priority</div>
                     </div>
                 </div>
+                
                 <button class="btn btn-primary" onclick="testSupabaseConnection()">🔧 Test Database</button>
-                <button class="btn btn-info" onclick="syncProspects()">🔄 Sync Prospects</button>
+                <button class="btn btn-info" onclick="viewCallLogs()">📊 View Call Logs</button>
             </div>
+            
             <div class="section">
                 <h3>📋 Call Disposition</h3>
                 
@@ -154,56 +165,59 @@
                     <input type="datetime-local" id="followUpDate">
                 </div>
                 
-                <button class="btn btn-primary" onclick="saveToSupabase()">💾 Save to Supabase</button>
+                <button class="btn btn-primary" onclick="saveCallRecord()">💾 Save Call Record</button>
             </div>
+            
             <div class="section">
                 <h3>📊 Activity Log</h3>
                 <div class="log-area" id="activityLog">
                     <div class="log-entry">
-                        <span class="log-timestamp">[14:30:00]</span>
-                        <span class="log-3cx">3CX SIP registration successful</span>
+                        <span class="log-timestamp">[System]</span>
+                        <span class="log-3cx">3CX Click-to-Call integration ready</span>
                     </div>
                     <div class="log-entry">
-                        <span class="log-timestamp">[14:30:01]</span>
-                        <span class="log-supabase">Supabase connection established</span>
+                        <span class="log-timestamp">[System]</span>
+                        <span class="log-supabase">Call logging database connected</span>
                     </div>
                     <div class="log-entry">
-                        <span class="log-timestamp">[14:30:02]</span>
-                        <span class="log-success">CRM ready - 526,847 prospects loaded</span>
+                        <span class="log-timestamp">[System]</span>
+                        <span class="log-success">CRM ready for prospect calling</span>
                     </div>
                 </div>
             </div>
+            
             <div class="section stats-dashboard">
                 <h3 style="color: white;">📈 Daily Performance</h3>
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-number" id="totalCalls">23</div>
+                        <div class="stat-number" id="totalCalls">0</div>
                         <div class="stat-label">Total Calls</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="connectRate">67%</div>
+                        <div class="stat-number" id="connectRate">0%</div>
                         <div class="stat-label">Connect Rate</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="avgTalkTime">4m 32s</div>
-                        <div class="stat-label">Avg Talk Time</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-number" id="appointmentsSet">3</div>
+                        <div class="stat-number" id="appointmentsSet">0</div>
                         <div class="stat-label">Appointments</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="qualifiedLeads">7</div>
+                        <div class="stat-number" id="qualifiedLeads">0</div>
                         <div class="stat-label">Qualified Leads</div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-number" id="callbacksScheduled">5</div>
-                        <div class="stat-label">Callbacks</div>
+                        <div class="stat-number" id="priorityCallsToday">0</div>
+                        <div class="stat-label">Priority Calls</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="nzbnEnrichedCalls">0</div>
+                        <div class="stat-label">NZBN Enriched</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>
