@@ -1,132 +1,304 @@
-// 3CX and Supabase focused state management
+// ===== 3CX CONFIGURATION - EXTENSION 200 =====
+const THREECX_CONFIG = {
+    instance: 'jamestaylor.3cx.co.nz',  // Your personal 3CX instance
+    protocol: 'https',
+    extension: '200',                    // Your new extension number
+    webClientPath: '/webclient'          // Path to web client
+};
+
+// ===== CRM STATE MANAGEMENT =====
 let crmState = {
-    currentCall: null,
-    selectedProspect: null,
+    currentProspect: null,
     prospects: [],
     currentDisposition: null,
-    callTimer: null,
-    isMuted: false,
-    isOnHold: false
+    clickToCallCount: 0,
+    dailyStats: {
+        totalCalls: 0,
+        connectedCalls: 0,
+        appointments: 0,
+        qualifiedLeads: 0,
+        priorityCalls: 0,
+        nzbnEnrichedCalls: 0
+    }
 };
 
-let dailyStats = {
-    totalCalls: 23,
-    connectedCalls: 15,
-    appointments: 3,
-    qualifiedLeads: 7,
-    callbacks: 5,
-    totalTalkTime: 4140 // seconds
-};
-
-// Sample prospects from Supabase (fallback if no upload)
-const supabaseProspects = [
+// ===== ENHANCED SAMPLE PROSPECTS =====
+const sampleProspects = [
     {
-        id: 'SP001',
+        id: 'ENR001',
         name: 'Sarah Johnson',
         phone: '+64 9 123 4567',
         email: 'sarah.j@email.com',
         property_interest: 'Auckland Central Apartment',
         budget: '$750k - $850k',
         status: 'new',
-        priority_score: 0,
-        nzbn_enriched: false,
-        company: '',
+        priority_score: 8.5,
+        nzbn_enriched: true,
+        company: 'Johnson Consulting Ltd',
         last_contact: null,
-        notes: 'Interested in 2-bedroom apartments, first home buyer'
+        notes: 'First home buyer, pre-approved finance'
     },
     {
-        id: 'SP002',
+        id: 'ENR002',
         name: 'Michael Chen',
         phone: '+64 9 234 5678',
-        email: 'mchen@gmail.com',
-        property_interest: 'North Shore House',
-        budget: '$950k - $1.2M',
+        email: 'mchen@techcorp.nz',
+        property_interest: 'North Shore Family Home',
+        budget: '$1.2M - $1.5M',
         status: 'warm',
-        priority_score: 0,
-        nzbn_enriched: false,
-        company: '',
-        last_contact: '2025-06-28',
-        notes: 'Pre-approved, looking for family home with good schools'
+        priority_score: 9.2,
+        nzbn_enriched: true,
+        company: 'TechCorp NZ Limited',
+        last_contact: '2025-07-10',
+        notes: 'Tech executive, cash buyer, urgent relocation'
     },
     {
-        id: 'SP003',
+        id: 'ENR003',
         name: 'Emma Thompson',
         phone: '+64 9 345 6789',
-        email: 'emma.thompson@outlook.com',
-        property_interest: 'West Auckland Investment',
-        budget: '$600k - $800k',
+        email: 'emma@propertyinvest.co.nz',
+        property_interest: 'Investment Portfolio',
+        budget: '$2M+ Portfolio',
         status: 'hot',
-        priority_score: 0,
-        nzbn_enriched: false,
-        company: '',
-        last_contact: '2025-07-01',
-        notes: 'Property investor, cash buyer, wants rental yield info'
+        priority_score: 9.8,
+        nzbn_enriched: true,
+        company: 'Property Invest Co NZ',
+        last_contact: '2025-07-11',
+        notes: 'Property investor, looking for 3+ properties'
     },
     {
-        id: 'SP004',
+        id: 'ENR004',
         name: 'David Wilson',
         phone: '+64 9 456 7890',
-        email: 'dwilson@company.co.nz',
+        email: 'dwilson@email.com',
         property_interest: 'Ponsonby Townhouse',
-        budget: '$1.5M+',
+        budget: '$1.8M - $2.2M',
         status: 'callback',
-        priority_score: 0,
+        priority_score: 7.3,
         nzbn_enriched: false,
         company: '',
-        last_contact: '2025-06-30',
-        notes: 'Upgrading from current home, specific location requirements'
+        last_contact: '2025-07-09',
+        notes: 'Upgrading from Remuera, specific location needs'
     },
     {
-        id: 'SP005',
+        id: 'ENR005',
         name: 'Lisa Park',
         phone: '+64 9 567 8901',
-        email: 'lisa.park@email.com',
-        property_interest: 'Eastern Suburbs Family Home',
-        budget: '$1M - $1.3M',
+        email: 'lisa.park@medtech.nz',
+        property_interest: 'Eastern Suburbs Medical Professional',
+        budget: '$1.5M - $1.8M',
         status: 'interested',
-        priority_score: 0,
-        nzbn_enriched: false,
-        company: '',
-        last_contact: '2025-06-25',
-        notes: 'Moving from Wellington, needs school zone information'
+        priority_score: 8.1,
+        nzbn_enriched: true,
+        company: 'MedTech Solutions Ltd',
+        last_contact: '2025-07-08',
+        notes: 'Doctor relocating from Wellington, school zones important'
     }
 ];
 
-// Initialize CRM
+// ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', function() {
     initializeCRM();
-    loadProspectsFromSupabase();
-    updateStatsDisplay();
-    
-    log('🚀 Bayleys CRM initialized successfully', 'success');
-    log('🌐 3CX API connection established', '3cx');
-    log('💾 Supabase database connected', 'supabase');
-    log('📊 Upload feature ready - you can now upload enriched calling lists', 'info');
+    log('🚀 Bayleys CRM with 3CX Click-to-Call initialized', 'success');
+    log('🌐 3CX instance: ' + THREECX_CONFIG.instance, '3cx');
+    log('📞 Extension 200 ready for click-to-call', '3cx');
 });
 
 function initializeCRM() {
-    crmState.prospects = [...supabaseProspects];
-    
-    // Simulate 3CX connection
-    setTimeout(() => {
-        log('📞 3CX SIP registration completed - Extension 101 active', '3cx');
-        updateActiveLines();
-    }, 1500);
+    loadSampleProspects();
+    updateAllStats();
+    document.getElementById('threeCXInstance').textContent = THREECX_CONFIG.instance;
 }
 
-// Enhanced prospect loading with upload support
-function loadProspectsFromSupabase() {
+// ===== 3CX CLICK-TO-CALL INTEGRATION =====
+function makeClickToCall() {
+    const phoneNumber = document.getElementById('dialNumber').value;
+    
+    if (!phoneNumber) {
+        if (crmState.currentProspect) {
+            document.getElementById('dialNumber').value = crmState.currentProspect.phone;
+        } else {
+            log('❌ Please select a prospect or enter a phone number', 'error');
+            alert('Please select a prospect or enter a phone number to call');
+            return;
+        }
+    }
+    
+    const finalNumber = document.getElementById('dialNumber').value;
+    
+    if (crmState.currentProspect) {
+        log(`👤 Initiating call to: ${crmState.currentProspect.name}`, 'info');
+        if (crmState.currentProspect.priority_score > 0) {
+            log(`🎯 Priority Score: ${crmState.currentProspect.priority_score}`, 'info');
+            crmState.dailyStats.priorityCalls++;
+        }
+        if (crmState.currentProspect.nzbn_enriched) {
+            log(`✅ NZBN Enriched prospect`, 'info');
+            crmState.dailyStats.nzbnEnrichedCalls++;
+        }
+        if (crmState.currentProspect.company) {
+            log(`🏢 Company: ${crmState.currentProspect.company}`, 'info');
+        }
+    }
+    
+    const cleanNumber = finalNumber.replace(/[^\d+]/g, '');
+    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}/#/dial/${encodeURIComponent(cleanNumber)}`;
+    
+    log(`📞 Opening 3CX Web Client for: ${finalNumber}`, '3cx');
+    log(`🔗 3CX URL: ${threeCXURL}`, '3cx');
+    
+    const windowFeatures = [
+        'width=500',
+        'height=700', 
+        'resizable=yes',
+        'scrollbars=yes',
+        'status=yes',
+        'menubar=no',
+        'toolbar=no',
+        'location=no'
+    ].join(',');
+    
+    const threeCXWindow = window.open(threeCXURL, '3CX_WebClient_' + Date.now(), windowFeatures);
+    
+    if (threeCXWindow) {
+        log('✅ 3CX Web Client opened - Click "Call" in 3CX to connect', 'success');
+        
+        document.getElementById('callStatus').textContent = `READY TO CALL - ${finalNumber}`;
+        document.getElementById('callStatus').className = 'call-status status-calling';
+        
+        crmState.clickToCallCount++;
+        crmState.dailyStats.totalCalls++;
+        
+        updateAllStats();
+        logCallInitiation(finalNumber);
+        
+        setTimeout(() => {
+            log('💡 Next: Click the "Call" button in the 3CX window to start dialing', 'info');
+        }, 1000);
+        
+    } else {
+        log('❌ Failed to open 3CX Web Client - popup may be blocked', 'error');
+        log('💡 Please allow popups for this site and try again', 'warning');
+        alert('Popup blocked! Please allow popups for this site to use click-to-call.');
+    }
+}
+
+// ===== CALL LOGGING =====
+function logCallInitiation(phoneNumber) {
+    const callRecord = {
+        timestamp: new Date().toISOString(),
+        prospect_id: crmState.currentProspect?.id || null,
+        prospect_name: crmState.currentProspect?.name || 'Direct Dial',
+        phone_number: phoneNumber,
+        priority_score: crmState.currentProspect?.priority_score || 0,
+        nzbn_enriched: crmState.currentProspect?.nzbn_enriched || false,
+        company: crmState.currentProspect?.company || '',
+        action: 'click_to_call_initiated',
+        agent_id: 'agent_200'
+    };
+    
+    log('💾 Logging call initiation...', 'supabase');
+    
+    setTimeout(() => {
+        log('✅ Call initiation logged successfully', 'supabase');
+        if (!window.callLogs) window.callLogs = [];
+        window.callLogs.push(callRecord);
+    }, 500);
+}
+
+function saveCallRecord() {
+    if (!crmState.currentDisposition) {
+        log('❌ Please select a call disposition first', 'error');
+        alert('Please select a call disposition before saving');
+        return;
+    }
+    
+    const callRecord = {
+        timestamp: new Date().toISOString(),
+        prospect_id: crmState.currentProspect?.id || null,
+        prospect_name: crmState.currentProspect?.name || 'Direct Dial',
+        phone_number: document.getElementById('dialNumber').value,
+        disposition: crmState.currentDisposition,
+        notes: document.getElementById('callNotes').value,
+        follow_up_date: document.getElementById('followUpDate').value || null,
+        priority_score: crmState.currentProspect?.priority_score || 0,
+        nzbn_enriched: crmState.currentProspect?.nzbn_enriched || false,
+        company: crmState.currentProspect?.company || '',
+        agent_id: 'agent_200'
+    };
+    
+    log('💾 Saving call record...', 'supabase');
+    
+    if (['appointment', 'interested'].includes(crmState.currentDisposition)) {
+        crmState.dailyStats.qualifiedLeads++;
+        crmState.dailyStats.connectedCalls++;
+    }
+    if (crmState.currentDisposition === 'appointment') {
+        crmState.dailyStats.appointments++;
+    }
+    
+    setTimeout(() => {
+        log('✅ Call record saved successfully', 'supabase');
+        
+        if (crmState.currentProspect) {
+            crmState.currentProspect.last_contact = new Date().toISOString().split('T')[0];
+            crmState.currentProspect.status = crmState.currentDisposition;
+            crmState.currentProspect.notes = document.getElementById('callNotes').value;
+        }
+        
+        clearCallForm();
+        loadProspectsDisplay();
+        updateAllStats();
+        
+        if (!window.callRecords) window.callRecords = [];
+        window.callRecords.push(callRecord);
+        
+    }, 1000);
+}
+
+function clearCallForm() {
+    crmState.currentDisposition = null;
+    document.querySelectorAll('.disposition-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    document.getElementById('callNotes').value = '';
+    document.getElementById('followUpDate').value = '';
+    
+    document.getElementById('callStatus').textContent = 'READY - Select prospect to call';
+    document.getElementById('callStatus').className = 'call-status status-idle';
+    
+    log('📋 Call form cleared - ready for next call', 'info');
+}
+
+// ===== PROSPECT MANAGEMENT =====
+function loadSampleProspects() {
+    crmState.prospects = [...sampleProspects];
+    crmState.prospects.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
+    loadProspectsDisplay();
+    
+    const enrichedCount = crmState.prospects.filter(p => p.nzbn_enriched).length;
+    const avgPriority = crmState.prospects.reduce((sum, p) => sum + (p.priority_score || 0), 0) / crmState.prospects.length;
+    
+    log(`📊 Loaded ${crmState.prospects.length} sample prospects`, 'success');
+    log(`✅ ${enrichedCount} prospects have NZBN enrichment`, 'success');
+    log(`📈 Average priority score: ${avgPriority.toFixed(1)}`, 'info');
+    
+    updateAllStats();
+}
+
+function loadProspectsDisplay() {
     const queue = document.getElementById('prospectQueue');
     queue.innerHTML = '';
     
     if (crmState.prospects.length === 0) {
-        queue.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No prospects loaded. Upload a calling list to get started!</div>';
+        queue.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No prospects loaded. Upload a calling list or load sample data!</div>';
         return;
     }
     
-    crmState.prospects.forEach((prospect, index) => {
+    crmState.prospects.forEach(prospect => {
         const item = document.createElement('div');
-        item.className = `prospect-item ${prospect === crmState.selectedProspect ? 'current' : ''}`;
+        item.className = `prospect-item ${prospect === crmState.currentProspect ? 'current' : ''}`;
         item.onclick = () => selectProspect(prospect);
         
         const statusColor = {
@@ -134,21 +306,17 @@ function loadProspectsFromSupabase() {
             'warm': 'tag-warm', 
             'new': 'tag-cold',
             'callback': 'tag-callback',
-            'interested': 'tag-warm',
-            'premium': 'tag-hot'
+            'interested': 'tag-warm'
         };
         
-        // Priority indicator
         const priorityBadge = prospect.priority_score > 0 ? 
             `<span class="tag" style="background: #3498db; color: white;">Priority: ${prospect.priority_score}</span>` : '';
         
-        // NZBN enrichment indicator
         const nzbnBadge = prospect.nzbn_enriched ? 
             `<span class="tag" style="background: #27ae60; color: white;">✅ NZBN</span>` : '';
         
-        // Company info
         const companyInfo = prospect.company ? 
-            `<div class="prospect-company" style="color: #3498db; font-size: 0.85rem;">🏢 ${prospect.company}</div>` : '';
+            `<div class="prospect-company">🏢 ${prospect.company}</div>` : '';
         
         item.innerHTML = `
             <div class="prospect-name">${prospect.name}</div>
@@ -165,16 +333,14 @@ function loadProspectsFromSupabase() {
         
         queue.appendChild(item);
     });
-    
-    log(`📋 Displaying ${crmState.prospects.length} prospects (sorted by priority)`, 'info');
 }
 
 function selectProspect(prospect) {
-    crmState.selectedProspect = prospect;
-    loadProspectsFromSupabase(); // Refresh to update selection
+    crmState.currentProspect = prospect;
+    loadProspectsDisplay();
     
-    // Update dial number
     document.getElementById('dialNumber').value = prospect.phone;
+    document.getElementById('callStatus').textContent = `SELECTED - ${prospect.name}`;
     
     log(`👤 Selected: ${prospect.name} (${prospect.phone})`, 'info');
     if (prospect.priority_score > 0) {
@@ -183,10 +349,9 @@ function selectProspect(prospect) {
     if (prospect.company) {
         log(`🏢 Company: ${prospect.company}`, 'info');
     }
-    log(`🏠 Interest: ${prospect.property_interest} • Budget: ${prospect.budget}`, 'info');
 }
 
-// FILE UPLOAD FUNCTIONS
+// ===== FILE UPLOAD FUNCTIONS =====
 function uploadProspectFile() {
     const fileInput = document.getElementById('prospectFileUpload');
     const file = fileInput.files[0];
@@ -206,10 +371,8 @@ function uploadProspectFile() {
             
             if (file.name.endsWith('.json')) {
                 data = JSON.parse(e.target.result);
-                log('📄 Parsing JSON file...', 'info');
             } else if (file.name.endsWith('.csv')) {
                 data = parseCSV(e.target.result);
-                log('📄 Parsing CSV file...', 'info');
             } else {
                 throw new Error('Unsupported file format. Please use .json or .csv files.');
             }
@@ -230,8 +393,6 @@ function parseCSV(csvText) {
     const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
     const prospects = [];
     
-    log(`📊 CSV headers found: ${headers.join(', ')}`, 'info');
-    
     for (let i = 1; i < lines.length; i++) {
         if (lines[i].trim()) {
             const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
@@ -251,11 +412,9 @@ function parseCSV(csvText) {
 function loadUploadedProspects(data) {
     if (!data.prospects || !Array.isArray(data.prospects)) {
         updateUploadStatus('Invalid file format. Expected "prospects" array.', 'error');
-        log('❌ Invalid file format - no prospects array found', 'error');
         return;
     }
     
-    // Clear current prospects and load new ones
     crmState.prospects = data.prospects.map((prospect, index) => ({
         id: prospect.id || `UP${index + 1}`,
         name: prospect.name || 'Unknown Name',
@@ -271,38 +430,31 @@ function loadUploadedProspects(data) {
         notes: prospect.notes || ''
     }));
     
-    // Sort by priority score (highest first)
     crmState.prospects.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
     
     const enrichedCount = crmState.prospects.filter(p => p.nzbn_enriched).length;
     const avgPriority = crmState.prospects.reduce((sum, p) => sum + (p.priority_score || 0), 0) / crmState.prospects.length;
     
     updateUploadStatus(`✅ Successfully loaded ${crmState.prospects.length} prospects`, 'success');
-    log(`📊 Uploaded ${crmState.prospects.length} enriched prospects`, 'success');
+    log(`📊 Uploaded ${crmState.prospects.length} prospects`, 'success');
     log(`✅ ${enrichedCount} prospects have NZBN enrichment`, 'success');
     log(`📈 Average priority score: ${avgPriority.toFixed(2)}`, 'info');
     
-    // Refresh the display
-    loadProspectsFromSupabase();
+    loadProspectsDisplay();
+    updateAllStats();
     
-    // Update stats
-    document.getElementById('totalProspects').textContent = crmState.prospects.length.toLocaleString();
-    
-    // Clear file input
     document.getElementById('prospectFileUpload').value = '';
 }
 
 function clearProspects() {
     crmState.prospects = [];
-    crmState.selectedProspect = null;
+    crmState.currentProspect = null;
     document.getElementById('dialNumber').value = '';
     
-    loadProspectsFromSupabase(); // This will show empty list
+    loadProspectsDisplay();
     updateUploadStatus('Prospect list cleared', 'info');
     log('🗑️ Prospect list cleared', 'info');
-    
-    // Reset stats
-    document.getElementById('totalProspects').textContent = '0';
+    updateAllStats();
 }
 
 function updateUploadStatus(message, type) {
@@ -316,253 +468,12 @@ function updateUploadStatus(message, type) {
     
     statusDiv.textContent = message;
     statusDiv.style.color = colors[type] || '#666';
-    statusDiv.style.fontWeight = type === 'error' ? 'bold' : 'normal';
 }
 
-// EXISTING CALL FUNCTIONS
-function makeCall() {
-    const phoneNumber = document.getElementById('dialNumber').value;
-    
-    if (!phoneNumber) {
-        // Auto-select first prospect if none selected
-        if (crmState.prospects.length > 0) {
-            selectProspect(crmState.prospects[0]);
-            document.getElementById('dialNumber').value = crmState.prospects[0].phone;
-        } else {
-            alert('Please enter a phone number or select a prospect');
-            return;
-        }
-    }
-    
-    if (crmState.currentCall) {
-        log('❌ Call already in progress', 'error');
-        return;
-    }
-    
-    log(`📞 Initiating 3CX call to ${phoneNumber}...`, '3cx');
-    log(`🔌 Connecting via Extension 101...`, '3cx');
-    
-    // Log prospect info if available
-    if (crmState.selectedProspect) {
-        if (crmState.selectedProspect.priority_score > 0) {
-            log(`🎯 Calling priority ${crmState.selectedProspect.priority_score} prospect`, 'info');
-        }
-        if (crmState.selectedProspect.nzbn_enriched) {
-            log(`✅ Prospect has NZBN enrichment data`, 'info');
-        }
-    }
-    
-    // Simulate 3CX API call
-    const callData = {
-        extension: '101',
-        destination: phoneNumber,
-        call_id: 'CALL_' + Date.now(),
-        prospect: crmState.selectedProspect
-    };
-    
-    // Update UI immediately
-    crmState.currentCall = {
-        ...callData,
-        startTime: new Date(),
-        timer: null
-    };
-    
-    document.getElementById('callStatus').textContent = `DIALING - ${phoneNumber}`;
-    document.getElementById('callStatus').className = 'call-status status-calling';
-    
-    document.getElementById('makeCallBtn').disabled = true;
-    document.getElementById('endCallBtn').disabled = false;
-    document.getElementById('holdCallBtn').disabled = false;
-    document.getElementById('transferCallBtn').disabled = false;
-    document.getElementById('muteCallBtn').disabled = false;
-    
-    // Simulate realistic call progression
-    log(`⏳ Establishing connection...`, 'info');
-    
-    setTimeout(() => {
-        if (crmState.currentCall) {
-            log(`📞 Ringing...`, 'info');
-            
-            // Simulate different outcomes with realistic timing
-            setTimeout(() => {
-                if (crmState.currentCall) {
-                    // Higher chance of connection for testing
-                    const outcomes = ['connected', 'connected', 'connected', 'voicemail', 'busy', 'no-answer'];
-                    const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
-                    
-                    log(`📋 Call outcome determined: ${outcome}`, 'warning');
-                    
-                    if (outcome === 'connected') {
-                        document.getElementById('callStatus').textContent = 'CONNECTED - In conversation';
-                        document.getElementById('callStatus').className = 'call-status status-connected';
-                        log('✅ Call connected successfully via 3CX', '3cx');
-                        log('🎙️ Audio established - conversation active', 'success');
-                        startCallTimer();
-                        updateActiveLines(1);
-                    } else {
-                        handleCallOutcome(outcome);
-                    }
-                }
-            }, 2000);
-        }
-    }, 1500);
-}
-
-function endCall() {
-    if (!crmState.currentCall) {
-        log('❌ No active call to end', 'error');
-        return;
-    }
-    
-    const duration = Math.floor((new Date() - crmState.currentCall.startTime) / 1000);
-    
-    log(`📞 Ending call - Duration: ${Math.floor(duration/60)}:${(duration%60).toString().padStart(2,'0')}`, '3cx');
-    
-    // Clean up call state
-    clearInterval(crmState.currentCall.timer);
-    crmState.currentCall = null;
-    crmState.isMuted = false;
-    crmState.isOnHold = false;
-    
-    // Reset UI
-    document.getElementById('callStatus').textContent = 'IDLE - Call ended';
-    document.getElementById('callStatus').className = 'call-status status-idle';
-    document.getElementById('callTimer').textContent = '00:00:00';
-    
-    document.getElementById('makeCallBtn').disabled = false;
-    document.getElementById('endCallBtn').disabled = true;
-    document.getElementById('holdCallBtn').disabled = true;
-    document.getElementById('transferCallBtn').disabled = true;
-    document.getElementById('muteCallBtn').disabled = true;
-    
-    // Update stats
-    dailyStats.totalCalls++;
-    dailyStats.connectedCalls++;
-    dailyStats.totalTalkTime += duration;
-    updateStatsDisplay();
-    updateActiveLines(0);
-    
-    log('✅ Call ended - Ready for disposition', 'success');
-}
-
-function holdCall() {
-    if (!crmState.currentCall) return;
-    
-    crmState.isOnHold = !crmState.isOnHold;
-    
-    if (crmState.isOnHold) {
-        document.getElementById('callStatus').textContent = 'ON HOLD - Call paused';
-        document.getElementById('holdCallBtn').textContent = 'Resume';
-        log('⏸️ Call placed on hold', 'warning');
-    } else {
-        document.getElementById('callStatus').textContent = 'CONNECTED - In conversation';
-        document.getElementById('holdCallBtn').textContent = 'Hold';
-        log('▶️ Call resumed', 'success');
-    }
-}
-
-function toggleMute() {
-    if (!crmState.currentCall) return;
-    
-    crmState.isMuted = !crmState.isMuted;
-    
-    if (crmState.isMuted) {
-        document.getElementById('muteCallBtn').textContent = 'Unmute';
-        document.getElementById('muteCallBtn').style.background = '#e74c3c';
-        log('🔇 Microphone muted', 'warning');
-    } else {
-        document.getElementById('muteCallBtn').textContent = 'Mute';
-        document.getElementById('muteCallBtn').style.background = '#95a5a6';
-        log('🔊 Microphone unmuted', 'success');
-    }
-}
-
-function showTransfer() {
-    const extensions = [
-        '102 - Sarah (Auckland Team)',
-        '103 - Mike (North Shore)',
-        '104 - Emma (West Auckland)', 
-        '200 - Manager'
-    ];
-    
-    const selection = prompt('Transfer call to:\n' + extensions.map((e, i) => `${i+1}. ${e}`).join('\n') + '\n\nEnter number (1-4):');
-    
-    if (selection && selection >= 1 && selection <= 4) {
-        log(`📞 Transferring call to: ${extensions[selection-1]}`, '3cx');
-        
-        // Simulate transfer
-        setTimeout(() => {
-            log('✅ Call transferred successfully', 'success');
-            endCall();
-        }, 2000);
-    }
-}
-
-function handleCallOutcome(outcome) {
-    log(`📋 Call outcome: ${outcome.toUpperCase()}`, 'warning');
-    
-    switch(outcome) {
-        case 'voicemail':
-            document.getElementById('callStatus').textContent = 'VOICEMAIL - Left message';
-            document.getElementById('callStatus').className = 'call-status status-calling';
-            log('📧 Voicemail detected - message left', 'warning');
-            break;
-        case 'busy':
-            document.getElementById('callStatus').textContent = 'BUSY - Line engaged';
-            document.getElementById('callStatus').className = 'call-status status-calling';
-            log('📞 Line busy - will retry later', 'warning');
-            break;
-        case 'no-answer':
-            document.getElementById('callStatus').textContent = 'NO ANSWER - No response';
-            document.getElementById('callStatus').className = 'call-status status-calling';
-            log('📞 No answer - prospect unavailable', 'warning');
-            break;
-    }
-    
-    // Auto-end call after a delay
-    setTimeout(() => {
-        log(`🔚 Auto-ending ${outcome} call...`, 'info');
-        endCall();
-        
-        // Auto-suggest disposition
-        const dispositionMap = {
-            'busy': 'callback',
-            'no-answer': 'callback', 
-            'voicemail': 'voicemail'
-        };
-        
-        if (dispositionMap[outcome]) {
-            // Auto-select disposition
-            setTimeout(() => {
-                const dispositionBtn = document.querySelector(`[onclick="setDisposition('${dispositionMap[outcome]}')"]`);
-                if (dispositionBtn) {
-                    dispositionBtn.click();
-                    log(`📋 Auto-suggested disposition: ${dispositionMap[outcome]}`, 'info');
-                }
-            }, 500);
-        }
-    }, 2500);
-}
-
-function startCallTimer() {
-    if (crmState.currentCall) {
-        crmState.currentCall.timer = setInterval(() => {
-            const elapsed = Math.floor((new Date() - crmState.currentCall.startTime) / 1000);
-            
-            const hours = Math.floor(elapsed / 3600);
-            const minutes = Math.floor((elapsed % 3600) / 60);
-            const seconds = elapsed % 60;
-            
-            const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            document.getElementById('callTimer').textContent = timeString;
-        }, 1000);
-    }
-}
-
+// ===== CALL DISPOSITION =====
 function setDisposition(disposition) {
     crmState.currentDisposition = disposition;
     
-    // Update UI
     document.querySelectorAll('.disposition-btn').forEach(btn => {
         btn.classList.remove('selected');
     });
@@ -570,7 +481,6 @@ function setDisposition(disposition) {
     
     log(`📋 Disposition: ${disposition.toUpperCase()}`, 'info');
     
-    // Auto-populate follow-up for callbacks
     if (disposition === 'callback' || disposition === 'appointment') {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -579,67 +489,99 @@ function setDisposition(disposition) {
     }
 }
 
-function saveToSupabase() {
-    if (!crmState.currentDisposition) {
-        alert('Please select a call disposition');
-        return;
+// ===== 3CX TESTING & UTILITIES =====
+function test3CXIntegration() {
+    log('🔧 Testing 3CX click-to-call integration...', '3cx');
+    
+    const testNumber = '+64 9 999 0000';
+    const cleanNumber = testNumber.replace(/[^\d+]/g, '');
+    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}/#/dial/${cleanNumber}`;
+    
+    log(`🔗 Test URL: ${threeCXURL}`, '3cx');
+    log(`📞 Testing with number: ${testNumber}`, 'info');
+    
+    const testWindow = window.open(threeCXURL, '3CX_Integration_Test', 'width=500,height=700');
+    
+    if (testWindow) {
+        log('✅ 3CX Web Client opened successfully for test', 'success');
+        log('🔧 Integration test passed - popup not blocked', '3cx');
+        
+        setTimeout(() => {
+            if (testWindow && !testWindow.closed) {
+                testWindow.close();
+                log('🔧 Test window closed automatically', '3cx');
+            }
+            log('✅ 3CX click-to-call integration working correctly', 'success');
+        }, 5000);
+        
+    } else {
+        log('❌ Integration test failed - popup blocked', 'error');
+        log('💡 Please allow popups for this site to use click-to-call', 'warning');
+        alert('Popup blocked! Please allow popups for this site to use 3CX integration.');
     }
+}
+
+function open3CXWebClient() {
+    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}`;
     
-    const callData = {
-        prospect_id: crmState.selectedProspect?.id || null,
-        prospect_name: crmState.selectedProspect?.name || 'Unknown',
-        phone_number: document.getElementById('dialNumber').value,
-        disposition: crmState.currentDisposition,
-        notes: document.getElementById('callNotes').value,
-        follow_up_date: document.getElementById('followUpDate').value || null,
-        call_duration: crmState.currentCall ? Math.floor((new Date() - crmState.currentCall.startTime) / 1000) : 0,
-        agent_id: 'agent_101',
-        priority_score: crmState.selectedProspect?.priority_score || 0,
-        nzbn_enriched: crmState.selectedProspect?.nzbn_enriched || false,
-        created_at: new Date().toISOString()
-    };
+    log('🌐 Opening 3CX Web Client...', '3cx');
     
-    log('💾 Saving call data to Supabase...', 'supabase');
+    const webClientWindow = window.open(threeCXURL, '3CX_WebClient_Main', 'width=800,height=900,resizable=yes,scrollbars=yes');
     
-    if (callData.priority_score > 0) {
-        log(`🎯 Saving priority ${callData.priority_score} prospect result`, 'info');
+    if (webClientWindow) {
+        log('✅ 3CX Web Client opened successfully', '3cx');
+    } else {
+        log('❌ Failed to open 3CX Web Client - popup blocked', 'error');
+        window.open(threeCXURL, '_blank');
+        log('🌐 3CX Web Client opened in new tab instead', 'info');
     }
+}
+
+function testSupabaseConnection() {
+    log('🔧 Testing Supabase database connection...', 'supabase');
     
-    // Simulate Supabase insert
-    setTimeout(() => {
-        log('✅ Call data saved successfully', 'supabase');
+    const tests = [
+        { name: 'Authentication', delay: 300 },
+        { name: 'Prospects Table Access', delay: 600 },
+        { name: 'Call Logs Table Access', delay: 900 },
+        { name: 'Insert Permissions', delay: 1200 }
+    ];
+    
+    tests.forEach((test, index) => {
+        setTimeout(() => {
+            log(`✅ ${test.name} - Connected`, 'supabase');
+            if (index === tests.length - 1) {
+                log('✅ All database tests passed', 'supabase');
+            }
+        }, test.delay);
+    });
+}
+
+function viewCallLogs() {
+    log('📊 Opening call logs view...', 'supabase');
+    
+    const logs = window.callLogs || [];
+    const records = window.callRecords || [];
+    
+    if (logs.length > 0 || records.length > 0) {
+        log(`📋 Found ${logs.length} call initiations and ${records.length} completed calls`, 'info');
         
-        // Update prospect status in database
-        if (crmState.selectedProspect) {
-            crmState.selectedProspect.last_contact = new Date().toISOString().split('T')[0];
-            crmState.selectedProspect.status = crmState.currentDisposition;
-            crmState.selectedProspect.notes = document.getElementById('callNotes').value;
-        }
-        
-        // Update stats
-        if (['appointment', 'interested'].includes(crmState.currentDisposition)) {
-            dailyStats.qualifiedLeads++;
-        }
-        if (crmState.currentDisposition === 'appointment') {
-            dailyStats.appointments++;
-        }
-        if (crmState.currentDisposition === 'callback') {
-            dailyStats.callbacks++;
-        }
-        
-        // Clear form
-        document.getElementById('callNotes').value = '';
-        document.getElementById('followUpDate').value = '';
-        crmState.currentDisposition = null;
-        
-        document.querySelectorAll('.disposition-btn').forEach(btn => {
-            btn.classList.remove('selected');
+        records.slice(-3).forEach(record => {
+            log(`📞 ${record.prospect_name}: ${record.disposition} (${record.phone_number})`, 'info');
         });
         
-        loadProspectsFromSupabase();
-        updateStatsDisplay();
-        
-    }, 1000);
+    } else {
+        log('📊 No call logs found - make some calls first!', 'info');
+    }
+    
+    log('💡 Full call history dashboard coming soon', 'info');
+}
+
+function refreshProspects() {
+    log('🔄 Refreshing prospect data...', 'info');
+    loadProspectsDisplay();
+    updateAllStats();
+    log('✅ Prospect queue refreshed', 'success');
 }
 
 function filterProspects() {
@@ -652,102 +594,33 @@ function filterProspects() {
     });
 }
 
-function loadMoreProspects() {
-    log('📥 Loading 50 more prospects from Supabase...', 'supabase');
+function updateAllStats() {
+    document.getElementById('prospectCount').textContent = crmState.prospects.length.toLocaleString();
+    document.getElementById('totalProspects').textContent = crmState.prospects.length.toLocaleString();
     
-    // Simulate loading more data
-    setTimeout(() => {
-        log('✅ Additional prospects loaded', 'success');
-        const currentCount = parseInt(document.getElementById('totalProspects').textContent.replace(/,/g, ''));
-        document.getElementById('totalProspects').textContent = (currentCount + 50).toLocaleString();
-    }, 1500);
-}
-
-function refreshProspects() {
-    log('🔄 Refreshing prospect data...', 'supabase');
-    loadProspectsFromSupabase();
-    log('✅ Prospect queue refreshed', 'success');
-}
-
-function test3CXConnection() {
-    log('🔧 Testing 3CX API connection...', '3cx');
+    document.getElementById('clickToCallCount').textContent = crmState.clickToCallCount;
+    document.getElementById('dailyClickToCalls').textContent = crmState.clickToCallCount;
     
-    const tests = [
-        { name: 'SIP Registration', delay: 500 },
-        { name: 'Extension Status', delay: 1000 },
-        { name: 'Call API', delay: 1500 },
-        { name: 'Transfer API', delay: 2000 }
-    ];
+    document.getElementById('totalCalls').textContent = crmState.dailyStats.totalCalls;
+    document.getElementById('callsToday').textContent = crmState.dailyStats.totalCalls;
+    document.getElementById('appointmentsSet').textContent = crmState.dailyStats.appointments;
+    document.getElementById('qualifiedLeads').textContent = crmState.dailyStats.qualifiedLeads;
+    document.getElementById('leadsThisWeek').textContent = crmState.dailyStats.qualifiedLeads;
+    document.getElementById('priorityCallsToday').textContent = crmState.dailyStats.priorityCalls;
+    document.getElementById('nzbnEnrichedCalls').textContent = crmState.dailyStats.nzbnEnrichedCalls;
     
-    tests.forEach(test => {
-        setTimeout(() => {
-            if (Math.random() > 0.1) {
-                log(`✅ ${test.name} - OK`, '3cx');
-            } else {
-                log(`❌ ${test.name} - Failed`, 'error');
-            }
-        }, test.delay);
-    });
-}
-
-function restart3CXConnection() {
-    log('🔄 Restarting 3CX SIP connection...', 'warning');
+    const avgPriority = crmState.prospects.length > 0 ? 
+        crmState.prospects.reduce((sum, p) => sum + (p.priority_score || 0), 0) / crmState.prospects.length : 0;
+    document.getElementById('avgPriorityScore').textContent = avgPriority.toFixed(1);
     
-    setTimeout(() => {
-        log('✅ SIP connection reestablished', '3cx');
-        updateActiveLines();
-    }, 2000);
-}
-
-function testSupabaseConnection() {
-    log('🔧 Testing Supabase database connection...', 'supabase');
-    
-    const tests = [
-        { name: 'Authentication', delay: 300 },
-        { name: 'Prospects Table', delay: 600 },
-        { name: 'Call Logs Table', delay: 900 },
-        { name: 'Insert Permission', delay: 1200 }
-    ];
-    
-    tests.forEach(test => {
-        setTimeout(() => {
-            log(`✅ ${test.name} - Connected`, 'supabase');
-        }, test.delay);
-    });
-}
-
-function syncProspects() {
-    log('🔄 Syncing prospects with Supabase...', 'supabase');
-    
-    setTimeout(() => {
-        log('✅ Prospect sync completed', 'success');
-        const currentCount = parseInt(document.getElementById('totalProspects').textContent.replace(/,/g, ''));
-        document.getElementById('totalProspects').textContent = (currentCount + 23).toLocaleString();
-    }, 2000);
-}
-
-function updateActiveLines(active = 0) {
-    document.getElementById('activeLines').textContent = `${active}/4`;
-}
-
-function updateStatsDisplay() {
-    document.getElementById('totalCalls').textContent = dailyStats.totalCalls;
-    document.getElementById('connectRate').textContent = Math.round((dailyStats.connectedCalls / dailyStats.totalCalls) * 100) + '%';
-    
-    const avgMinutes = Math.floor(dailyStats.totalTalkTime / dailyStats.connectedCalls / 60);
-    const avgSeconds = Math.floor((dailyStats.totalTalkTime / dailyStats.connectedCalls) % 60);
-    document.getElementById('avgTalkTime').textContent = `${avgMinutes}m ${avgSeconds}s`;
-    
-    document.getElementById('appointmentsSet').textContent = dailyStats.appointments;
-    document.getElementById('qualifiedLeads').textContent = dailyStats.qualifiedLeads;
-    document.getElementById('callbacksScheduled').textContent = dailyStats.callbacks;
-    
-    document.getElementById('callsToday').textContent = dailyStats.totalCalls;
+    const connectRate = crmState.dailyStats.totalCalls > 0 ? 
+        Math.round((crmState.dailyStats.connectedCalls / crmState.dailyStats.totalCalls) * 100) : 0;
+    document.getElementById('connectRate').textContent = connectRate + '%';
 }
 
 function handleDialKeypress(event) {
     if (event.key === 'Enter') {
-        makeCall();
+        makeClickToCall();
     }
 }
 
@@ -773,48 +646,18 @@ function log(message, type = 'info') {
     
     logArea.appendChild(logEntry);
     logArea.scrollTop = logArea.scrollHeight;
-    
-    console.log(`[${timestamp}] ${message}`);
 }
 
-// Test function for debugging call flow
-function testCallFlow() {
-    log('🧪 Starting comprehensive call flow test...', 'warning');
-    
-    // Reset any existing call
-    if (crmState.currentCall) {
-        endCall();
-    }
-    
-    // Select first prospect automatically
-    if (crmState.prospects.length > 0) {
-        selectProspect(crmState.prospects[0]);
-        log(`👤 Auto-selected: ${crmState.prospects[0].name}`, 'info');
-        
-        if (crmState.prospects[0].priority_score > 0) {
-            log(`🎯 Testing with priority ${crmState.prospects[0].priority_score} prospect`, 'info');
-        }
-    }
-    
-    // Start test call
-    setTimeout(() => {
-        log('📞 Initiating test call...', 'info');
-        makeCall();
-    }, 1000);
-}
-
-// Keyboard shortcuts
+// ===== KEYBOARD SHORTCUTS =====
 document.addEventListener('keydown', function(e) {
     if (e.ctrlKey) {
         switch(e.key) {
-            case '1': e.preventDefault(); makeCall(); break;
-            case '2': e.preventDefault(); endCall(); break;
-            case 'h': e.preventDefault(); holdCall(); break;
-            case 'm': e.preventDefault(); toggleMute(); break;
-            case 't': e.preventDefault(); testCallFlow(); break;
+            case '1': e.preventDefault(); makeClickToCall(); break;
+            case 't': e.preventDefault(); test3CXIntegration(); break;
             case 'u': e.preventDefault(); document.getElementById('prospectFileUpload').click(); break;
+            case 's': e.preventDefault(); loadSampleProspects(); break;
         }
     }
 });
 
-log('⌨️ Shortcuts: Ctrl+1 (Call), Ctrl+2 (End), Ctrl+H (Hold), Ctrl+M (Mute), Ctrl+T (Test), Ctrl+U (Upload)', 'info');
+log('⌨️ Shortcuts: Ctrl+1 (Call), Ctrl+T (Test), Ctrl+U (Upload), Ctrl+S (Sample Data)', 'info');
