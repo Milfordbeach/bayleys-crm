@@ -389,10 +389,11 @@ function uploadProspectFile() {
     reader.readAsText(file);
 }
 
-// ORIGINAL WORKING PARSER
+// ORIGINAL WORKING PARSER - Updated to handle spaces in headers
 function parseCSV(csvText) {
     const lines = csvText.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    // Convert headers to lowercase to handle case variations
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
     const prospects = [];
     
     for (let i = 1; i < lines.length; i++) {
@@ -419,17 +420,18 @@ function loadUploadedProspects(data) {
     
     crmState.prospects = data.prospects.map((prospect, index) => ({
         id: prospect.id || `UP${index + 1}`,
-        name: prospect.name || 'Unknown Name',
-        phone: prospect.phone || '',
-        email: prospect.email || '',
-        property_interest: prospect.property_interest || prospect.interest || '',
+        // Map your specific CSV headers
+        name: prospect['full name'] || prospect['Full name'] || prospect.name || 'Unknown Name',
+        phone: prospect['primary phone'] || prospect['Primary phone'] || prospect.phone || '',
+        email: prospect.email || prospect.Email || '',
+        property_interest: prospect['business type'] || prospect['Business type'] || prospect.property_interest || '',
         budget: prospect.budget || '',
         status: prospect.status || 'new',
-        priority_score: parseFloat(prospect.priority_score) || 0,
+        priority_score: parseFloat(prospect['prospect score'] || prospect['Prospect score'] || prospect.priority_score) || 0,
         nzbn_enriched: prospect.nzbn_enriched === 'true' || prospect.nzbn_enriched === true,
-        company: prospect.company || '',
+        company: prospect.business || prospect.Business || prospect.company || '',
         last_contact: prospect.last_contact || null,
-        notes: prospect.notes || ''
+        notes: `${prospect.street || ''} ${prospect.city || ''}`.trim() || prospect.notes || ''
     }));
     
     crmState.prospects.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
