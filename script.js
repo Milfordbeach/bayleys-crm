@@ -352,7 +352,7 @@ function selectProspect(prospect) {
     }
 }
 
-// ===== FILE UPLOAD FUNCTIONS =====
+// ===== FIXED FILE UPLOAD FUNCTIONS =====
 function uploadProspectFile() {
     const fileInput = document.getElementById('prospectFileUpload');
     const file = fileInput.files[0];
@@ -390,13 +390,28 @@ function uploadProspectFile() {
 }
 
 function parseCSV(csvText) {
-    const lines = csvText.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    // Remove any BOM characters
+    csvText = csvText.replace(/^\uFEFF/, '');
+    
+    // Split into lines and filter out empty lines
+    const lines = csvText.split(/\r?\n/).filter(line => line.trim());
+    
+    if (lines.length === 0) {
+        throw new Error('CSV file is empty');
+    }
+    
+    // Parse headers - handle quoted values properly
+    const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+    
+    // Log headers for debugging
+    log(`📋 CSV Headers found: ${headers.join(', ')}`, 'info');
+    
     const prospects = [];
     
+    // Parse each data row
     for (let i = 1; i < lines.length; i++) {
         if (lines[i].trim()) {
-            const values = lines[i].split(',').map(v => v.trim().replace(/"/g, ''));
+            const values = parseCSVLine(lines[i]);
             const prospect = {};
             
             headers.forEach((header, index) => {
@@ -407,7 +422,42 @@ function parseCSV(csvText) {
         }
     }
     
+    log(`📊 Parsed ${prospects.length} rows from CSV`, 'info');
+    
     return { prospects: prospects };
+}
+
+// Helper function to properly parse CSV lines with quoted values
+function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                // Escaped quote
+                current += '"';
+                i++;
+            } else {
+                // Toggle quote mode
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            // End of field
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    // Don't forget the last field
+    result.push(current.trim());
+    
+    return result;
 }
 
 function loadUploadedProspects(data) {
@@ -416,28 +466,85 @@ function loadUploadedProspects(data) {
         return;
     }
     
-    crmState.prospects = data.prospects.map((prospect, index) => ({
-        id: prospect.id || `UP${index + 1}`,
-        name: prospect.name || 'Unknown Name',
-        phone: prospect.phone || '',
-        email: prospect.email || '',
-        property_interest: prospect.property_interest || prospect.interest || '',
-        budget: prospect.budget || '',
-        status: prospect.status || 'new',
-        priority_score: parseFloat(prospect.priority_score) || 0,
-        nzbn_enriched: prospect.nzbn_enriched === 'true' || prospect.nzbn_enriched === true,
-        company: prospect.company || '',
-        last_contact: prospect.last_contact || null,
-        notes: prospect.notes || ''
-    }));
+    // Map various possible header names to our standard fields
+    const fieldMappings = {
+        name: ['name', 'fullname', 'full_name', 'contact', 'contact_name', 'person'],
+        phone: ['phone', 'phonenumber', 'phone_number', 'mobile', 'cell', 'telephone', 'tel'],
+        email: ['email', 'email_address', 'emailaddress', 'mail'],
+        company: ['company', 'company_name', 'companyname', 'organization', 'org'],
+        property_interest: ['property_interest', 'interest', 'property', 'property_type', 'looking_for'],
+        budget: ['budget', 'price_range', 'price', 'budget_range'],
+        status: ['status', 'lead_status', 'stage'],
+        priority_score: ['priority_score', 'priority', 'score', 'rating'],
+        notes: ['notes', 'comments', 'description', 'note'],
+        nzbn_enriched: ['nzbn_enriched', 'nzbn', 'enriched']
+    };
     
+    // Helper function to find field value using multiple possible names
+    function findFieldValue(prospect, fieldNames) {
+        for (const fieldName of fieldNames) {
+            if (prospect[fieldName] !== undefined && prospect[fieldName] !== '') {
+                return prospect[fieldName];
+            }
+        }
+        return '';
+    }
+    
+    crmState.prospects = data.prospects.map((prospect, index) => {
+        // Try to extract data using various possible field names
+        const mappedProspect = {
+            id: prospect.id || `UP${index + 1}`,
+            name: findFieldValue(prospect, fieldMappings.name) || 'Unknown Name',
+            phone: findFieldValue(prospect, fieldMappings.phone) || '',
+            email: findFieldValue(prospect, fieldMappings.email) || '',
+            property_interest: findFieldValue(prospect, fieldMappings.property_interest) || '',
+            budget: findFieldValue(prospect, fieldMappings.budget) || '',
+            status: findFieldValue(prospect, fieldMappings.status) || 'new',
+            priority_score: parseFloat(findFieldValue(prospect, fieldMappings.priority_score)) || 0,
+            nzbn_enriched: ['true', 'yes', '1'].includes(findFieldValue(prospect, fieldMappings.nzbn_enriched).toLowerCase()),
+            company: findFieldValue(prospect, fieldMappings.company) || '',
+            last_contact: prospect.last_contact || null,
+            notes: findFieldValue(prospect, fieldMappings.notes) || ''
+        };
+        
+        // Clean phone numbers - ensure they have proper format
+        if (mappedProspect.phone) {
+            // Remove any non-numeric characters except +
+            let cleanPhone = mappedProspect.phone.replace(/[^\d+]/g, '');
+            
+            // Add country code if missing
+            if (!cleanPhone.startsWith('+')) {
+                if (cleanPhone.startsWith('64')) {
+                    cleanPhone = '+' + cleanPhone;
+                } else if (cleanPhone.startsWith('0')) {
+                    cleanPhone = '+64' + cleanPhone.substring(1);
+                } else {
+                    cleanPhone = '+64' + cleanPhone;
+                }
+            }
+            
+            mappedProspect.phone = cleanPhone;
+        }
+        
+        return mappedProspect;
+    });
+    
+    // Filter out prospects without phone numbers
+    const validProspects = crmState.prospects.filter(p => p.phone);
+    const invalidCount = crmState.prospects.length - validProspects.length;
+    
+    if (invalidCount > 0) {
+        log(`⚠️ Skipped ${invalidCount} prospects without phone numbers`, 'warning');
+    }
+    
+    crmState.prospects = validProspects;
     crmState.prospects.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
     
     const enrichedCount = crmState.prospects.filter(p => p.nzbn_enriched).length;
-    const avgPriority = crmState.prospects.reduce((sum, p) => sum + (p.priority_score || 0), 0) / crmState.prospects.length;
+    const avgPriority = crmState.prospects.reduce((sum, p) => sum + (p.priority_score || 0), 0) / crmState.prospects.length || 0;
     
     updateUploadStatus(`✅ Successfully loaded ${crmState.prospects.length} prospects`, 'success');
-    log(`📊 Uploaded ${crmState.prospects.length} prospects`, 'success');
+    log(`📊 Uploaded ${crmState.prospects.length} valid prospects`, 'success');
     log(`✅ ${enrichedCount} prospects have NZBN enrichment`, 'success');
     log(`📈 Average priority score: ${avgPriority.toFixed(2)}`, 'info');
     
