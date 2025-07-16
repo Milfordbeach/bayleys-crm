@@ -142,8 +142,8 @@ function makeClickToCall() {
     }
     
     const cleanNumber = finalNumber.replace(/[^\d+]/g, '');
-    // FIXED: Use #dial/ instead of /#/dial/
-    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}#dial/${encodeURIComponent(cleanNumber)}`;
+    // FIXED: Use the correct 3CX V20 URL format
+    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}/#/call?phone=${cleanNumber}`;
     
     log(`📞 Opening 3CX Web Client for: ${finalNumber}`, '3cx');
     log(`🔗 3CX URL: ${threeCXURL}`, '3cx');
@@ -496,8 +496,8 @@ function test3CXIntegration() {
     
     const testNumber = '+64 9 999 0000';
     const cleanNumber = testNumber.replace(/[^\d+]/g, '');
-    // Use the same fixed format as makeClickToCall
-    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}#dial/${encodeURIComponent(cleanNumber)}`;
+    // Use the same V20 format as makeClickToCall
+    const threeCXURL = `${THREECX_CONFIG.protocol}://${THREECX_CONFIG.instance}${THREECX_CONFIG.webClientPath}/#/call?phone=${cleanNumber}`;
     
     log(`🔗 Test URL: ${threeCXURL}`, '3cx');
     log(`📞 Testing with number: ${testNumber}`, 'info');
