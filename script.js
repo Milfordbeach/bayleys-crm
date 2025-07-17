@@ -420,18 +420,25 @@ function loadUploadedProspects(data) {
     
     crmState.prospects = data.prospects.map((prospect, index) => ({
         id: prospect.id || `UP${index + 1}`,
-        // Map your specific CSV headers
-        name: prospect['full name'] || prospect['Full name'] || prospect.name || 'Unknown Name',
-        phone: prospect['primary phone'] || prospect['Primary phone'] || prospect.phone || '',
+        // Map your specific CSV headers - note the underscores!
+        name: prospect['full_name'] || prospect['Full_Name'] || prospect['full name'] || 
+              prospect['Full Name'] || prospect.name || 'Unknown Name',
+        phone: prospect['primary_phone'] || prospect['Primary_Phone'] || 
+               prospect['mobile_clean'] || prospect['Mobile_Clean'] || 
+               prospect['landline_clean'] || prospect['Landline_Clean'] || 
+               prospect.phone || '',
         email: prospect.email || prospect.Email || '',
-        property_interest: prospect['business type'] || prospect['Business type'] || prospect.property_interest || '',
+        property_interest: prospect['business type'] || prospect['Business Type'] || 
+                         prospect.property_interest || '',
         budget: prospect.budget || '',
         status: prospect.status || 'new',
-        priority_score: parseFloat(prospect['prospect score'] || prospect['Prospect score'] || prospect.priority_score) || 0,
-        nzbn_enriched: prospect.nzbn_enriched === 'true' || prospect.nzbn_enriched === true,
+        priority_score: parseFloat(prospect['priority_score'] || prospect['Priority_Score'] || 
+                      prospect.priority_score || 0) || 0,
+        nzbn_enriched: (prospect.nzbn || prospect.NZBN) ? true : false,
         company: prospect.business || prospect.Business || prospect.company || '',
         last_contact: prospect.last_contact || null,
-        notes: `${prospect.street || ''} ${prospect.city || ''}`.trim() || prospect.notes || ''
+        notes: prospect['full_address'] || prospect['Full_Address'] || 
+               `${prospect.street || ''} ${prospect.city || ''}`.trim() || ''
     }));
     
     crmState.prospects.sort((a, b) => (b.priority_score || 0) - (a.priority_score || 0));
